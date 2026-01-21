@@ -1,0 +1,143 @@
+{
+  "@@locale": "en",
+  "chooseLanguage": "Choose Language",
+  "@chooseLanguage": {
+    "description": "Title for language selection page"
+  },
+  "selectYourPreferredLanguage": "Select your preferred language",
+  "@selectYourPreferredLanguage": {
+    "description": "Subtitle for language selection"
+  },
+  "english": "English",
+  "@english": {
+    "description": "English language option"
+  },
+  "arabic": "العربية",
+  "@arabic": {
+    "description": "Arabic language option"
+  },
+  "welcomeBack": "Welcome back",
+  "@welcomeBack": {
+    "description": "Sign in page title"
+  },
+  "signInToContinue": "Sign in to your account to continue",
+  "@signInToContinue": {
+    "description": "Sign in page subtitle"
+  },
+  "email": "Email",
+  "@email": {
+    "description": "Email field label"
+  },
+  "enterYourEmail": "Enter your email",
+  "@enterYourEmail": {
+    "description": "Email field placeholder"
+  },
+  "password": "Password",
+  "@password": {
+    "description": "Password field label"
+  },
+  "enterYourPassword": "Enter your password",
+  "@enterYourPassword": {
+    "description": "Password field placeholder"
+  },
+  "rememberMe": "Remember me",
+  "@rememberMe": {
+    "description": "Remember me checkbox label"
+  },
+  "forgotPassword": "Forgot password?",
+  "@forgotPassword": {
+    "description": "Forgot password link text"
+  },
+  "signIn": "Sign in",
+  "@signIn": {
+    "description": "Sign in button text"
+  },
+  "orContinueWith": "or continue with",
+  "@orContinueWith": {
+    "description": "Alternative sign in methods separator"
+  },
+  "continueWithGoogle": "Continue with Google",
+  "@continueWithGoogle": {
+    "description": "Google sign in button text"
+  },
+  "continueWithFacebook": "Continue with Facebook",
+  "@continueWithFacebook": {
+    "description": "Facebook sign in button text"
+  },
+  "dontHaveAccount": "Don't have an account?",
+  "@dontHaveAccount": {
+    "description": "Sign up prompt text"
+  },
+  "signUp": "Sign up",
+  "@signUp": {
+    "description": "Sign up link text"
+  },
+  "createAccount": "Create account",
+  "@createAccount": {
+    "description": "Sign up page title"
+  },
+  "joinWslnyToStart": "Join Wslny to start your journey",
+  "@joinWslnyToStart": {
+    "description": "Sign up page subtitle"
+  },
+  "fullName": "Full Name",
+  "@fullName": {
+    "description": "Full name field label"
+  },
+  "enterYourFullName": "Enter your full name",
+  "@enterYourFullName": {
+    "description": "Full name field placeholder"
+  },
+  "phoneNumber": "Phone Number",
+  "@phoneNumber": {
+    "description": "Phone number field label"
+  },
+  "phoneNumberOptional": "Phone Number  (Optional)",
+  "@phoneNumberOptional": {
+    "description": "Phone number field label with optional tag"
+  },
+  "phoneNumberPlaceholder": "+20 1xx xxx xxxx",
+  "@phoneNumberPlaceholder": {
+    "description": "Phone number field placeholder"
+  },
+  "createPassword": "Create a password",
+  "@createPassword": {
+    "description": "Create password field placeholder"
+  },
+  "confirmPassword": "Confirm Password",
+  "@confirmPassword": {
+    "description": "Confirm password field label"
+  },
+  "confirmYourPassword": "Confirm your password",
+  "@confirmYourPassword": {
+    "description": "Confirm password field placeholder"
+  },
+  "agreeToTerms": "I agree to the",
+  "@agreeToTerms": {
+    "description": "Terms agreement prefix"
+  },
+  "termsOfService": "Terms of Service",
+  "@termsOfService": {
+    "description": "Terms of service link text"
+  },
+  "and": "and",
+  "@and": {
+    "description": "Conjunction between terms and privacy"
+  },
+  "privacyPolicy": "Privacy Policy",
+  "@privacyPolicy": {
+    "description": "Privacy policy link text"
+  },
+  "createAccountButton": "Create Account",
+  "@createAccountButton": {
+    "description": "Create account button text"
+  },
+  "orSignUpWith": "or sign up with",
+  "@orSignUpWith": {
+    "description": "Alternative sign up methods separator"
+  },
+  "alreadyHaveAccount": "Already have an account?",
+  "@alreadyHaveAccount": {
+    "description": "Sign in prompt text"
+  }
+}
