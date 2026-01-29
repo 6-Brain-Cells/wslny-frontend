@@ -38,39 +38,40 @@ class _SignInScreenState extends State<SignInScreen> {
   void _handleSignIn() async {
     if (_formKey.currentState?.validate() ?? false) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signInWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         rememberMe: _rememberMe,
       );
-      
+
       if (success && mounted) {
         // Navigate to home screen (to be implemented later)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign in successful!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Sign in successful!')));
+        Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
       } else if (mounted && authProvider.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
       }
     }
   }
 
   void _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.signInWithGoogle();
-    
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Google sign in successful!')),
       );
     } else if (mounted && authProvider.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
     }
   }
 
@@ -80,7 +81,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final languageProvider = Provider.of<LanguageProvider>(context);
     final isRTL = languageProvider.isArabic;
-    
+
     return PopScope(
       canPop: false,
       onPopInvoked: (bool didPop) {
@@ -109,11 +110,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
-                        child: Icon(
-                          Icons.waves,
-                          size: 20,
-                          color: Colors.white,
-                        ),
+                        child: Icon(Icons.waves, size: 20, color: Colors.white),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -146,17 +143,17 @@ class _SignInScreenState extends State<SignInScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Subtitle
                     Text(
                       l10n.signInToContinue,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Email Field
                     CustomTextField(
                       controller: _emailController,
@@ -168,16 +165,17 @@ class _SignInScreenState extends State<SignInScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                            .hasMatch(value)) {
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Password Field
                     CustomTextField(
                       controller: _passwordController,
@@ -196,9 +194,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Remember Me & Forgot Password
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -232,17 +230,14 @@ class _SignInScreenState extends State<SignInScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Sign In Button
-                    CustomButton(
-                      text: l10n.signIn,
-                      onPressed: _handleSignIn,
-                    ),
-                    
+                    CustomButton(text: l10n.signIn, onPressed: _handleSignIn),
+
                     const SizedBox(height: 24),
-                    
+
                     // Divider with "or continue with"
                     Row(
                       children: [
@@ -257,9 +252,9 @@ class _SignInScreenState extends State<SignInScreen> {
                         const Expanded(child: Divider()),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Google Sign In Button
                     SocialAuthButton(
                       text: l10n.continueWithGoogle,
@@ -267,9 +262,9 @@ class _SignInScreenState extends State<SignInScreen> {
                       iconColor: AppColors.google,
                       onPressed: _handleGoogleSignIn,
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
+
                     // Sign Up Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

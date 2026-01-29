@@ -139,5 +139,10 @@
   "alreadyHaveAccount": "Already have an account?",
   "@alreadyHaveAccount": {
     "description": "Sign in prompt text"
-  }
+  },
+   "navHome": "Home",
+  "navFavorites": "Favorites",
+  "navCommunity": "Community",
+  "navRewards": "Rewards",
+  "navProfile": "Profile"
 }

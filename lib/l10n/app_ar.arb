@@ -34,5 +34,10 @@
   "privacyPolicy": "سياسة الخصوصية",
   "createAccountButton": "إنشاء حساب",
   "orSignUpWith": "أو سجل باستخدام",
-  "alreadyHaveAccount": "لديك حساب بالفعل؟"
+  "alreadyHaveAccount": "لديك حساب بالفعل؟",
+   "navHome": "الرئيسية",
+  "navFavorites": "المفضلة",
+  "navCommunity": "المجتمع",
+  "navRewards": "المكافآت",
+  "navProfile": "الملف الشخصي"
 }

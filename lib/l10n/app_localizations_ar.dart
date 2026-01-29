@@ -112,4 +112,19 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get alreadyHaveAccount => 'لديك حساب بالفعل؟';
+
+  @override
+  String get navHome => 'الرئيسية';
+
+  @override
+  String get navFavorites => 'المفضلة';
+
+  @override
+  String get navCommunity => 'المجتمع';
+
+  @override
+  String get navRewards => 'المكافآت';
+
+  @override
+  String get navProfile => 'الملف الشخصي';
 }

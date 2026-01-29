@@ -307,6 +307,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Already have an account?'**
   String get alreadyHaveAccount;
+
+  /// No description provided for @navHome.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// No description provided for @navFavorites.
+  ///
+  /// In en, this message translates to:
+  /// **'Favorites'**
+  String get navFavorites;
+
+  /// No description provided for @navCommunity.
+  ///
+  /// In en, this message translates to:
+  /// **'Community'**
+  String get navCommunity;
+
+  /// No description provided for @navRewards.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewards'**
+  String get navRewards;
+
+  /// No description provided for @navProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navProfile;
 }
 
 class _AppLocalizationsDelegate

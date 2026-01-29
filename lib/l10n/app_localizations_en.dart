@@ -112,4 +112,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alreadyHaveAccount => 'Already have an account?';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navFavorites => 'Favorites';
+
+  @override
+  String get navCommunity => 'Community';
+
+  @override
+  String get navRewards => 'Rewards';
+
+  @override
+  String get navProfile => 'Profile';
 }
