@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wslny/config/app_colors.dart';
+import 'package:wslny/config/routes.dart';
 
 class ChatbotPage extends StatelessWidget {
   const ChatbotPage({super.key});
@@ -9,8 +10,38 @@ class ChatbotPage extends StatelessWidget {
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Wslny Assistant'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.chat_bubble_outline,
+                  size: 18,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text('Wslny'),
+            ],
+          ),
           centerTitle: false,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_outline),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.profile),
+              tooltip: 'Profile',
+            ),
+          ],
         ),
         body: Column(
           children: [

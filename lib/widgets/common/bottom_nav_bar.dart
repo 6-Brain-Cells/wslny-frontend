@@ -49,16 +49,6 @@ class BottomNavBar extends StatelessWidget {
             label: l10n.navFavorites,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.people_outline),
-            selectedIcon: const Icon(Icons.people),
-            label: l10n.navCommunity,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.emoji_events_outlined),
-            selectedIcon: const Icon(Icons.emoji_events),
-            label: l10n.navRewards,
-          ),
-          NavigationDestination(
             icon: const Icon(Icons.person_outline),
             selectedIcon: const Icon(Icons.person),
             label: l10n.navProfile,

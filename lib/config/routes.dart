@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wslny/screens/MainLayout.dart';
 import 'package:wslny/screens/pages/chatbot_page.dart';
+import 'package:wslny/screens/pages/profile_page.dart';
 import 'package:wslny/screens/pages/rewards_page.dart';
 import '../screens/auth/language_selection_screen.dart';
 import '../screens/auth/sign_in_screen.dart';
@@ -12,6 +13,7 @@ class AppRoutes {
   static const String signUp = '/sign-up';
   static const String mainLayout = '/main';
   static const String chatbot = '/chatbot';
+  static const String profile = '/profile';
   static const String routeOptions = '/route-options';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
@@ -28,6 +30,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const MainLayout());
       case chatbot:
         return MaterialPageRoute(builder: (_) => const ChatbotPage());
+      case profile:
+        return MaterialPageRoute(builder: (_) => const ProfilePage());
       case routeOptions:
         return MaterialPageRoute(
           builder: (_) => const Scaffold(

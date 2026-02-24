@@ -3,10 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:wslny/l10n/app_localizations.dart';
 import 'package:wslny/providers/language_provider.dart';
 import 'package:wslny/widgets/common/bottom_nav_bar.dart';
-import 'package:wslny/screens/pages/home_page.dart';
+import 'package:wslny/screens/pages/map_home_page.dart';
 import 'package:wslny/screens/pages/favorites_page.dart';
-import 'package:wslny/screens/pages/community_page.dart';
-import 'package:wslny/screens/pages/rewards_page.dart';
 import 'package:wslny/screens/pages/profile_page.dart';
 
 class MainLayout extends StatefulWidget {
@@ -20,10 +18,8 @@ class _MainLayoutState extends State<MainLayout> {
   int _currentIndex = 0;
 
   final _pages = const [
-    HomePage(),
+    MapHomePage(),
     FavoritesPage(),
-    CommunityPage(),
-    RewardsPage(),
     ProfilePage(),
   ];
 
