@@ -20,11 +20,14 @@ class SignUpScreen extends StatefulWidget {
 
 class _SignUpScreenState extends State<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _fullNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _addressController = TextEditingController();
+  String _selectedGender = 'male';
   bool _agreeToTerms = false;
 
   void _navigateToLanguageSelection() {
@@ -33,11 +36,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _addressController.dispose();
     super.dispose();
   }
 
@@ -45,33 +50,40 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please agree to the Terms of Service and Privacy Policy'),
+          content: Text(
+            'Please agree to the Terms of Service and Privacy Policy',
+          ),
         ),
       );
       return;
     }
-    
+
     if (_formKey.currentState?.validate() ?? false) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      
+
       final success = await authProvider.signUpWithEmail(
-        fullName: _fullNameController.text.trim(),
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
         email: _emailController.text.trim(),
         password: _passwordController.text,
-        phoneNumber: _phoneController.text.trim().isNotEmpty
+        mobileNumber: _phoneController.text.trim().isNotEmpty
             ? _phoneController.text.trim()
             : null,
+        gender: _selectedGender,
+        address: _addressController.text.trim().isNotEmpty
+            ? _addressController.text.trim()
+            : null,
       );
-      
+
       if (success && mounted) {
         // Navigate to home screen (to be implemented later)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Account created successfully!')),
         );
       } else if (mounted && authProvider.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authProvider.error!)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
       }
     }
   }
@@ -80,24 +92,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (!_agreeToTerms) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please agree to the Terms of Service and Privacy Policy'),
+          content: Text(
+            'Please agree to the Terms of Service and Privacy Policy',
+          ),
         ),
       );
       return;
     }
-    
+
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.signInWithGoogle();
-    
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Account created successfully!')),
       );
     } else if (mounted && authProvider.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(authProvider.error!)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
     }
   }
 
@@ -107,7 +121,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final languageProvider = Provider.of<LanguageProvider>(context);
     final isRTL = languageProvider.isArabic;
-    
+
     return PopScope(
       canPop: false,
       onPopInvoked: (bool didPop) {
@@ -136,11 +150,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
-                        child: Icon(
-                          Icons.waves,
-                          size: 20,
-                          color: Colors.white,
-                        ),
+                        child: Icon(Icons.waves, size: 20, color: Colors.white),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -173,27 +183,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    
+
                     const SizedBox(height: 8),
-                    
+
                     // Subtitle
                     Text(
                       l10n.joinWslnyToStart,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    
+
                     const SizedBox(height: 32),
-                    
-                    // Full Name Field
+
+                    // First Name Field
                     CustomTextField(
-                      controller: _fullNameController,
-                      label: l10n.fullName,
-                      hintText: l10n.enterYourFullName,
+                      controller: _firstNameController,
+                      label: 'First Name',
+                      hintText: 'Enter your first name',
                       keyboardType: TextInputType.name,
                       prefixIcon: const Icon(Icons.person_outline),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter your full name';
+                          return 'Please enter your first name';
                         }
                         if (value.length < 2) {
                           return 'Name must be at least 2 characters';
@@ -201,9 +211,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    
+
+                    const SizedBox(height: 16),
+
+                    // Last Name Field
+                    CustomTextField(
+                      controller: _lastNameController,
+                      label: 'Last Name',
+                      hintText: 'Enter your last name',
+                      keyboardType: TextInputType.name,
+                      prefixIcon: const Icon(Icons.person_outline),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your last name';
+                        }
+                        if (value.length < 2) {
+                          return 'Name must be at least 2 characters';
+                        }
+                        return null;
+                      },
+                    ),
+
                     const SizedBox(height: 20),
-                    
+
                     // Email Field
                     CustomTextField(
                       controller: _emailController,
@@ -215,16 +245,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your email';
                         }
-                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                            .hasMatch(value)) {
+                        if (!RegExp(
+                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                        ).hasMatch(value)) {
                           return 'Please enter a valid email';
                         }
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Phone Number Field
                     CustomTextField(
                       controller: _phoneController,
@@ -233,9 +264,65 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       keyboardType: TextInputType.phone,
                       prefixIcon: const Icon(Icons.phone_outlined),
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
+                    // Gender Field
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Gender',
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(fontWeight: FontWeight.w500),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text('Male'),
+                                value: 'male',
+                                groupValue: _selectedGender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value!;
+                                  });
+                                },
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                            Expanded(
+                              child: RadioListTile<String>(
+                                title: const Text('Female'),
+                                value: 'female',
+                                groupValue: _selectedGender,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value!;
+                                  });
+                                },
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Address Field
+                    CustomTextField(
+                      controller: _addressController,
+                      label: 'Address (Optional)',
+                      hintText: 'Enter your address',
+                      keyboardType: TextInputType.streetAddress,
+                      prefixIcon: const Icon(Icons.location_on_outlined),
+                    ),
+
+                    const SizedBox(height: 20),
+
                     // Password Field
                     CustomTextField(
                       controller: _passwordController,
@@ -254,9 +341,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 20),
-                    
+
                     // Confirm Password Field
                     CustomTextField(
                       controller: _confirmPasswordController,
@@ -275,9 +362,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         return null;
                       },
                     ),
-                    
+
                     const SizedBox(height: 16),
-                    
+
                     // Terms and Conditions Checkbox
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,10 +395,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 },
                                 child: Text(
                                   l10n.termsOfService,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ),
                               Text(
@@ -324,10 +412,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 },
                                 child: Text(
                                   l10n.privacyPolicy,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
                                 ),
                               ),
                             ],
@@ -335,17 +424,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Create Account Button
                     CustomButton(
                       text: l10n.createAccountButton,
                       onPressed: _handleSignUp,
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Divider with "or sign up with"
                     Row(
                       children: [
@@ -360,9 +449,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         const Expanded(child: Divider()),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Google Sign Up Button
                     SocialAuthButton(
                       text: l10n.continueWithGoogle,
@@ -370,9 +459,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       iconColor: AppColors.google,
                       onPressed: _handleGoogleSignUp,
                     ),
-                    
+
                     const SizedBox(height: 24),
-                    
+
                     // Sign In Link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/env.dart';
 import 'package:wslny/models/transit_stop.dart';
@@ -14,6 +16,7 @@ enum PointPickMode { start, end }
 
 /// Green for start (matches map pin)
 const Color _startColor = Color(0xFF43A047);
+
 /// Red for end (matches map pin)
 const Color _endColor = Color(0xFFE53935);
 
@@ -92,67 +95,124 @@ class _MapHomePageState extends State<MapHomePage> {
 
   void _updateMarkers() {
     final Set<Marker> m = {};
+
+    // My location marker
     if (_myLocation != null) {
-      m.add(Marker(
-        markerId: const MarkerId('me'),
-        position: _myLocation!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        infoWindow: const InfoWindow(title: 'My location'),
-      ));
+      m.add(
+        Marker(
+          markerId: const MarkerId('me'),
+          position: _myLocation!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueAzure,
+          ),
+          infoWindow: const InfoWindow(title: 'My Location'),
+        ),
+      );
     }
+
+    // Start location marker
     if (_start != null) {
-      m.add(Marker(
-        markerId: const MarkerId('start'),
-        position: _start!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Start'),
-      ));
+      m.add(
+        Marker(
+          markerId: const MarkerId('start'),
+          position: _start!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueGreen,
+          ),
+          infoWindow: InfoWindow(
+            title: 'Start Point',
+            snippet: _startAddress ?? 'Selected location',
+          ),
+        ),
+      );
     }
+
+    // End location marker
     if (_end != null) {
-      m.add(Marker(
-        markerId: const MarkerId('end'),
-        position: _end!,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: 'End'),
-      ));
+      m.add(
+        Marker(
+          markerId: const MarkerId('end'),
+          position: _end!,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: 'End Point',
+            snippet: _endAddress ?? 'Selected location',
+          ),
+        ),
+      );
     }
+
+    // Transit stop markers
     for (final s in _transitStops) {
       final hue = s.type == TransitStopType.bus
           ? BitmapDescriptor.hueOrange
           : BitmapDescriptor.hueViolet;
-      m.add(Marker(
-        markerId: MarkerId('transit_${s.id}'),
-        position: s.position,
-        icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-        infoWindow: InfoWindow(title: s.name),
-      ));
+      m.add(
+        Marker(
+          markerId: MarkerId('transit_${s.id}'),
+          position: s.position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
+          infoWindow: InfoWindow(title: s.name, snippet: '${s.type.name} stop'),
+        ),
+      );
     }
-    setState(() => _markers
-      ..clear()
-      ..addAll(m));
+
+    setState(
+      () => _markers
+        ..clear()
+        ..addAll(m),
+    );
   }
 
   void _updatePolyline() {
     _polylines.clear();
     if (_routePoints.length >= 2) {
-      _polylines.add(Polyline(
-        polylineId: const PolylineId('route'),
-        points: _routePoints,
-        color: Colors.purple,
-        width: 5,
-      ));
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          points: _routePoints,
+          color: Colors.purple,
+          width: 5,
+        ),
+      );
     }
     setState(() {});
   }
 
-  void _onMapTap(LatLng pos) {
+  void _onMapTap(LatLng pos) async {
+    // Get place name using reverse geocoding
+    String placeName = 'Selected location';
+    try {
+      debugPrint('Getting place name for: ${pos.latitude}, ${pos.longitude}');
+      final uri = Uri.parse('https://nominatim.openstreetmap.org/reverse')
+          .replace(
+            queryParameters: {
+              'lat': pos.latitude.toString(),
+              'lon': pos.longitude.toString(),
+              'format': 'json',
+              'addressdetails': '1',
+            },
+          );
+
+      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>?;
+        if (data != null && data['display_name'] != null) {
+          placeName = data['display_name'].toString();
+          debugPrint('Found place name: $placeName');
+        }
+      }
+    } catch (e) {
+      debugPrint('Reverse geocoding failed: $e');
+    }
+
     setState(() {
       if (_pickMode == PointPickMode.start) {
         _start = pos;
-        _startAddress = 'Dropped pin';
+        _startAddress = placeName;
       } else {
         _end = pos;
-        _endAddress = 'Dropped pin';
+        _endAddress = placeName;
       }
       _routeError = null;
       _routePoints = [];
@@ -301,24 +361,88 @@ class _MapHomePageState extends State<MapHomePage> {
 
   Future<void> _searchLocation() async {
     final query = _searchController.text.trim();
-    if (query.isEmpty) return;
+    if (query.isEmpty) {
+      _showSearchError('Please enter a location to search');
+      return;
+    }
+
     setState(() => _isSearching = true);
-    final res = await _geocodingService.search(query);
-    if (!mounted) return;
-    setState(() {
-      _isSearching = false;
-      _searchResults = res.isSuccess ? res.places : [];
-    });
-    if (res.isSuccess && _searchResults.isNotEmpty && mounted) {
-      final place = await showModalBottomSheet<GeocodingPlace>(
-        context: context,
-        builder: (ctx) => _SearchResultsSheet(results: _searchResults),
-      );
-      if (place != null && mounted) _onSearchResultTap(place);
+
+    try {
+      debugPrint('Searching for: $query');
+      final res = await _geocodingService.search(query);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isSearching = false;
+        _searchResults = res.isSuccess ? res.places : [];
+      });
+
+      debugPrint('Search results: ${_searchResults.length} places found');
+
+      if (!res.isSuccess) {
+        _showSearchError(res.error ?? 'Search failed');
+        return;
+      }
+
+      if (_searchResults.isEmpty) {
+        _showSearchError('No places found for "$query"');
+        return;
+      }
+
+      if (mounted) {
+        final place = await showModalBottomSheet<GeocodingPlace>(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (ctx) => _SearchResultsSheet(results: _searchResults),
+        );
+
+        if (place != null && mounted) {
+          _onSearchResultTap(place);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isSearching = false);
+        _showSearchError('Search error: $e');
+      }
     }
   }
 
+  void _showSearchError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
   void _onSearchResultTap(GeocodingPlace place) {
+    // Show success feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                '${_pickMode == PointPickMode.start ? 'Start' : 'End'} location selected',
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: _pickMode == PointPickMode.start
+            ? _startColor
+            : _endColor,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
     setState(() {
       if (_pickMode == PointPickMode.start) {
         _start = place.position;
@@ -328,11 +452,24 @@ class _MapHomePageState extends State<MapHomePage> {
         _endAddress = place.displayName;
       }
     });
+
+    // Update markers to show the new pin
     _updateMarkers();
-    if (_start != null && _end != null) _fetchRoute();
+
+    // Animate camera to the selected location
     _mapController?.animateCamera(
-      CameraUpdate.newLatLngZoom(place.position, 14),
+      CameraUpdate.newLatLngZoom(place.position, 15),
     );
+
+    // Auto-switch pick mode for convenience
+    if (_pickMode == PointPickMode.start && _end == null) {
+      setState(() => _pickMode = PointPickMode.end);
+    }
+
+    // Fetch route if both points are set
+    if (_start != null && _end != null) {
+      _fetchRoute();
+    }
   }
 
   @override
@@ -360,7 +497,11 @@ class _MapHomePageState extends State<MapHomePage> {
                 color: AppColors.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.map_outlined, size: 20, color: Colors.white),
+              child: const Icon(
+                Icons.map_outlined,
+                size: 20,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(width: 8),
             const Text('Wslny'),
@@ -400,9 +541,7 @@ class _MapHomePageState extends State<MapHomePage> {
                     onMapCreated: (c) {
                       _mapController = c;
                       if (_myLocation != null) {
-                        c.animateCamera(
-                          CameraUpdate.newLatLng(_myLocation!),
-                        );
+                        c.animateCamera(CameraUpdate.newLatLng(_myLocation!));
                       }
                       _updateMarkers();
                     },
@@ -444,8 +583,7 @@ class _MapHomePageState extends State<MapHomePage> {
                   bottom: 0,
                   child: _ControlPanel(
                     pickMode: _pickMode,
-                    onPickModeChanged: (m) =>
-                        setState(() => _pickMode = m),
+                    onPickModeChanged: (m) => setState(() => _pickMode = m),
                     myLocation: _myLocation,
                     start: _start,
                     end: _end,
@@ -494,32 +632,65 @@ class _SearchBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         child: Row(
           children: [
-            const Icon(Icons.search, color: AppColors.primary),
-            const SizedBox(width: 8),
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.search,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: TextField(
                 controller: controller,
-                decoration: const InputDecoration(
-                  hintText: 'Type location or tap map',
+                decoration: InputDecoration(
+                  hintText: 'Search for a place...',
+                  hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                   border: InputBorder.none,
                   isDense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
+                style: const TextStyle(fontSize: 14),
                 onSubmitted: (_) => onSearch(),
+                textInputAction: TextInputAction.search,
               ),
             ),
-            IconButton(
-              icon: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.search),
-              onPressed: isLoading ? null : onSearch,
+            const SizedBox(width: 8),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: isLoading ? Colors.grey[300] : AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: IconButton(
+                icon: isLoading
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.grey[600]!,
+                          ),
+                        ),
+                      )
+                    : const Icon(Icons.search, color: Colors.white, size: 20),
+                onPressed: isLoading ? null : onSearch,
+              ),
             ),
           ],
         ),
@@ -535,36 +706,248 @@ class _SearchResultsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.4,
-      maxChildSize: 0.7,
-      minChildSize: 0.2,
-      expand: false,
-      builder: (context, scrollController) {
-        if (results.isEmpty) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Text('No results'),
-          );
-        }
-        return ListView.builder(
-          controller: scrollController,
-          itemCount: results.length,
-          itemBuilder: (context, i) {
-            final p = results[i];
-            return ListTile(
-              leading: const Icon(Icons.place),
-              title: Text(
-                p.displayName,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => Navigator.of(context).pop(p),
-            );
-          },
-        );
-      },
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20),
+          topRight: Radius.circular(20),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.search, color: AppColors.primary),
+                const SizedBox(width: 8),
+                Text(
+                  'Search Results',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${results.length} places',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+
+          const Divider(),
+
+          // Results list
+          ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
+            child: ListView.builder(
+              shrinkWrap: true,
+              itemCount: results.length,
+              itemBuilder: (context, i) {
+                final place = results[i];
+                return ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _getPlaceTypeColor(place.type).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getPlaceTypeIcon(place.type, place.classType),
+                      color: _getPlaceTypeColor(place.type),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    place.displayName,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 4),
+                      Text(
+                        _getPlaceTypeLabel(place.type, place.classType),
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      if (place.importance > 0) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'Relevance: ${(place.importance * 100).toStringAsFixed(0)}%',
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  onTap: () => Navigator.of(context).pop(place),
+                );
+              },
+            ),
+          ),
+
+          // Bottom padding
+          const SizedBox(height: 16),
+        ],
+      ),
     );
+  }
+
+  IconData _getPlaceTypeIcon(String type, String classType) {
+    switch (type.toLowerCase()) {
+      case 'amenity':
+        switch (classType.toLowerCase()) {
+          case 'restaurant':
+          case 'cafe':
+          case 'fast_food':
+            return Icons.restaurant;
+          case 'hotel':
+            return Icons.hotel;
+          case 'hospital':
+            return Icons.local_hospital;
+          case 'school':
+          case 'university':
+            return Icons.school;
+          case 'bank':
+            return Icons.account_balance;
+          case 'pharmacy':
+            return Icons.local_pharmacy;
+          case 'supermarket':
+            return Icons.local_grocery_store;
+          case 'parking':
+            return Icons.local_parking;
+          default:
+            return Icons.place;
+        }
+      case 'shop':
+        return Icons.shopping_cart;
+      case 'tourism':
+        switch (classType.toLowerCase()) {
+          case 'hotel':
+            return Icons.hotel;
+          case 'museum':
+            return Icons.museum;
+          case 'attraction':
+            return Icons.attractions;
+          default:
+            return Icons.tour;
+        }
+      case 'highway':
+        return Icons.directions_car;
+      case 'building':
+        return Icons.business;
+      case 'leisure':
+        return Icons.park;
+      case 'natural':
+        return Icons.terrain;
+      default:
+        return Icons.place;
+    }
+  }
+
+  Color _getPlaceTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'amenity':
+        return Colors.blue;
+      case 'shop':
+        return Colors.purple;
+      case 'tourism':
+        return Colors.green;
+      case 'highway':
+        return Colors.orange;
+      case 'building':
+        return Colors.grey;
+      case 'leisure':
+        return Colors.teal;
+      case 'natural':
+        return Colors.brown;
+      default:
+        return AppColors.primary;
+    }
+  }
+
+  String _getPlaceTypeLabel(String type, String classType) {
+    switch (type.toLowerCase()) {
+      case 'amenity':
+        switch (classType.toLowerCase()) {
+          case 'restaurant':
+            return 'Restaurant';
+          case 'cafe':
+            return 'Café';
+          case 'fast_food':
+            return 'Fast Food';
+          case 'hotel':
+            return 'Hotel';
+          case 'hospital':
+            return 'Hospital';
+          case 'school':
+            return 'School';
+          case 'university':
+            return 'University';
+          case 'bank':
+            return 'Bank';
+          case 'pharmacy':
+            return 'Pharmacy';
+          case 'supermarket':
+            return 'Supermarket';
+          case 'parking':
+            return 'Parking';
+          default:
+            return 'Amenity';
+        }
+      case 'shop':
+        return 'Shop';
+      case 'tourism':
+        switch (classType.toLowerCase()) {
+          case 'hotel':
+            return 'Hotel';
+          case 'museum':
+            return 'Museum';
+          case 'attraction':
+            return 'Attraction';
+          default:
+            return 'Tourist Place';
+        }
+      case 'highway':
+        return 'Road';
+      case 'building':
+        return 'Building';
+      case 'leisure':
+        return 'Leisure';
+      case 'natural':
+        return 'Natural Feature';
+      default:
+        return 'Place';
+    }
   }
 }
 
@@ -665,9 +1048,9 @@ class _ControlPanel extends StatelessWidget {
                       child: Text(
                         startAddress!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _startColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: _startColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -686,9 +1069,9 @@ class _ControlPanel extends StatelessWidget {
                       child: Text(
                         endAddress!,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _endColor,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: _endColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -762,9 +1145,9 @@ class _ControlPanel extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               'Tap map to set point • Or type above and search',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textHint,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textHint),
             ),
           ],
         ),
