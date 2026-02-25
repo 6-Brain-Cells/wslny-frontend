@@ -5,6 +5,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class Env {
   Env._();
 
+  static String get backendApiBaseUrl =>
+      dotenv.env['BACKEND_API_BASE_URL']?.trim().replaceAll(RegExp(r'/$'), '') ??
+      'https://wslny-backend-service.agreeablebush-4a28df70.uaenorth.azurecontainerapps.io/api';
+
   static String get googleMapsApiKey =>
       dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
 
@@ -17,4 +21,5 @@ class Env {
       'https://overpass-api.de/api/interpreter';
 
   static bool get hasGoogleMapsKey => googleMapsApiKey.isNotEmpty;
+  static bool get hasBackendApiUrl => backendApiBaseUrl.isNotEmpty;
 }

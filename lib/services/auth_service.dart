@@ -43,8 +43,11 @@ class AuthService {
       }
 
       final response = await _apiService.post(
-        '/api/auth/login',
-        body: {'email': email, 'password': password},
+        '/auth/login',
+        body: {
+          'email': email,
+          'password': password,
+        },
         includeAuth: false,
       );
 
@@ -59,17 +62,26 @@ class AuthService {
         AppConstants.authTokenKey,
         response['token'] as String,
       );
-      await prefs.setString(
-        AppConstants.refreshTokenKey,
-        response['refresh_token'] as String,
-      );
+      
+      // Handle refresh token if provided
+      if (response['refresh_token'] != null) {
+        await prefs.setString(
+          AppConstants.refreshTokenKey,
+          response['refresh_token'] as String,
+        );
+      }
 
-      if (user.email != null) {
+      if (user.id != null) {
+        await prefs.setString(AppConstants.userIdKey, user.id!);
+      } else if (user.email != null) {
         await prefs.setString(AppConstants.userIdKey, user.email!);
       }
 
       return user;
     } catch (e) {
+      if (e.toString().contains('CORS') || e.toString().contains('Failed to fetch')) {
+        throw Exception('Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}');
+      }
       throw Exception('Sign in failed: $e');
     }
   }
@@ -117,17 +129,27 @@ class AuthService {
         return user;
       }
 
+      final requestBody = <String, dynamic>{
+        'email': email,
+        'password': password,
+        'first_name': firstName,
+        'last_name': lastName,
+      };
+
+      // Add optional fields only if they're not null and not empty
+      if (mobileNumber != null && mobileNumber.isNotEmpty) {
+        requestBody['mobile_number'] = mobileNumber;
+      }
+      if (gender != null && gender.isNotEmpty) {
+        requestBody['gender'] = gender;
+      }
+      if (address != null && address.isNotEmpty) {
+        requestBody['address'] = address;
+      }
+
       final response = await _apiService.post(
-        '/api/auth/register',
-        body: {
-          'first_name': firstName,
-          'last_name': lastName,
-          'email': email,
-          'password': password,
-          'mobile_number': mobileNumber,
-          'gender': gender,
-          'address': address,
-        },
+        '/auth/register',
+        body: requestBody,
         includeAuth: false,
       );
 
@@ -142,17 +164,26 @@ class AuthService {
         AppConstants.authTokenKey,
         response['token'] as String,
       );
-      await prefs.setString(
-        AppConstants.refreshTokenKey,
-        response['refresh_token'] as String,
-      );
+      
+      // Handle refresh token if provided
+      if (response['refresh_token'] != null) {
+        await prefs.setString(
+          AppConstants.refreshTokenKey,
+          response['refresh_token'] as String,
+        );
+      }
 
-      if (user.email != null) {
+      if (user.id != null) {
+        await prefs.setString(AppConstants.userIdKey, user.id!);
+      } else if (user.email != null) {
         await prefs.setString(AppConstants.userIdKey, user.email!);
       }
 
       return user;
     } catch (e) {
+      if (e.toString().contains('CORS') || e.toString().contains('Failed to fetch')) {
+        throw Exception('Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}');
+      }
       throw Exception('Sign up failed: $e');
     }
   }
@@ -218,13 +249,25 @@ class AuthService {
 
       if (!isLoggedIn) return null;
 
-      // TODO: Fetch user from API when backend is ready
-      // final userId = prefs.getString(AppConstants.userIdKey);
-      // final response = await _apiService.get('/users/$userId');
-      // return UserModel.fromJson(response);
+      if (AppConstants.useMockMode) {
+        // Return mock user for development
+        return UserModel(
+          firstName: 'Test',
+          lastName: 'User',
+          email: prefs.getString(AppConstants.userIdKey),
+        );
+      }
 
-      return null;
+      // Fetch user profile from API
+      final response = await _apiService.get('/auth/profile');
+      return UserModel.fromJson(response['user'] as Map<String, dynamic>);
     } catch (e) {
+      // If token is invalid, clear auth state
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(AppConstants.isLoggedInKey);
+      await prefs.remove(AppConstants.userIdKey);
+      await prefs.remove(AppConstants.authTokenKey);
+      await prefs.remove(AppConstants.refreshTokenKey);
       return null;
     }
   }

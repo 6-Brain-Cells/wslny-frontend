@@ -1,11 +1,10 @@
 class AppConstants {
   // API Configuration
-  static const String apiBaseUrl =
-      'https://wslny-backend-service.agreeablebush-4a28df70.uaenorth.azurecontainerapps.io';
   static const int apiTimeout = 30000; // 30 seconds
 
   // Development mode - set to true to use mock data when backend is not available
-  static const bool useMockMode = true;
+  // Set to true temporarily if experiencing CORS issues during web development
+  static const bool useMockMode = false;
 
   // Storage Keys
   static const String languageKey = 'selected_language';

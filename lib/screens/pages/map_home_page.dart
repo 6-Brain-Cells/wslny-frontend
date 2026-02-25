@@ -6,9 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/env.dart';
 import 'package:wslny/models/transit_stop.dart';
+import 'package:wslny/models/route_models.dart';
 import 'package:wslny/services/geocoding_service.dart';
 import 'package:wslny/services/location_service.dart';
 import 'package:wslny/services/osrm_service.dart';
+import 'package:wslny/services/route_service.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/services/overpass_service.dart';
 
@@ -36,6 +38,7 @@ class _MapHomePageState extends State<MapHomePage> {
   final OsrmService _osrmService = OsrmService();
   final OverpassService _overpassService = OverpassService();
   final GeocodingService _geocodingService = GeocodingService();
+  final RouteService _routeService = RouteService();
 
   PointPickMode _pickMode = PointPickMode.start;
   LatLng? _myLocation;
@@ -325,6 +328,118 @@ class _MapHomePageState extends State<MapHomePage> {
     _updatePolyline();
   }
 
+  Future<void> _requestRoute() async {
+    // Check if we have at least an end point
+    if (_end == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a destination point'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Use current location as start if no start point is selected
+    LatLng? startPoint = _start;
+    if (startPoint == null) {
+      if (_myLocation == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please wait for location to be detected or select a start point'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      startPoint = _myLocation;
+    }
+
+    // Show route filter selection dialog
+    final filter = await _showRouteFilterDialog();
+    if (filter == null) return;
+
+    try {
+      setState(() {
+        _isRouting = true;
+        _routeError = null;
+      });
+
+      final routeResponse = await _routeService.getRouteByCoordinates(
+        originLat: startPoint!.latitude,
+        originLon: startPoint.longitude,
+        destinationLat: _end!.latitude,
+        destinationLon: _end!.longitude,
+        filter: filter,
+        currentLatitude: _myLocation?.latitude,
+        currentLongitude: _myLocation?.longitude,
+      );
+
+      if (mounted) {
+        // Navigate to route results screen
+        Navigator.pushNamed(
+          context,
+          AppRoutes.routeResults,
+          arguments: routeResponse,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _routeError = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRouting = false;
+        });
+      }
+    }
+  }
+
+  Future<RouteFilter?> _showRouteFilterDialog() async {
+    return showDialog<RouteFilter>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Route Type'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: RouteFilter.values.map((filter) {
+            return ListTile(
+              title: Text(filter.displayName),
+              subtitle: Text(_getFilterDescription(filter)),
+              onTap: () => Navigator.of(context).pop(filter),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getFilterDescription(RouteFilter filter) {
+    switch (filter) {
+      case RouteFilter.optimal:
+        return 'Best balance of time, cost, and comfort';
+      case RouteFilter.fastest:
+        return 'Shortest travel time';
+      case RouteFilter.cheapest:
+        return 'Lowest cost option';
+      case RouteFilter.busOnly:
+        return 'Use buses only';
+      case RouteFilter.microbusOnly:
+        return 'Use microbuses only';
+      case RouteFilter.metroOnly:
+        return 'Use metro/subway only';
+    }
+  }
+
   Future<void> _toggleTransit() async {
     if (_showTransit) {
       setState(() {
@@ -600,6 +715,7 @@ class _MapHomePageState extends State<MapHomePage> {
                     onMeToEnd: _meToEnd,
                     onShowTransit: _toggleTransit,
                     onClear: _clearPoints,
+                    onRequestRoute: _requestRoute,
                   ),
                 ),
               ],
@@ -970,6 +1086,7 @@ class _ControlPanel extends StatelessWidget {
   final VoidCallback onMeToEnd;
   final VoidCallback onShowTransit;
   final VoidCallback onClear;
+  final VoidCallback onRequestRoute;
 
   const _ControlPanel({
     required this.pickMode,
@@ -990,6 +1107,7 @@ class _ControlPanel extends StatelessWidget {
     required this.onMeToEnd,
     required this.onShowTransit,
     required this.onClear,
+    required this.onRequestRoute,
   });
 
   @override
@@ -1107,6 +1225,36 @@ class _ControlPanel extends StatelessWidget {
                 ),
               ],
             ),
+            // Route Request Button (show if we have at least an end point)
+            if (end != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: isRouting ? null : onRequestRoute,
+                  icon: isRouting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.directions, size: 18),
+                  label: Text(isRouting 
+                      ? 'Getting Route...' 
+                      : start != null 
+                          ? 'Get Route' 
+                          : 'Get Route from My Location'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ],
             if (locationError != null) ...[
               const SizedBox(height: 8),
               Text(

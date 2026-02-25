@@ -3,9 +3,11 @@ import 'package:wslny/screens/MainLayout.dart';
 import 'package:wslny/screens/pages/chatbot_page.dart';
 import 'package:wslny/screens/pages/profile_page.dart';
 import 'package:wslny/screens/pages/rewards_page.dart';
+import 'package:wslny/screens/pages/route_results_page.dart';
 import '../screens/auth/language_selection_screen.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
+import '../models/route_models.dart';
 
 class AppRoutes {
   static const String languageSelection = '/';
@@ -15,6 +17,7 @@ class AppRoutes {
   static const String chatbot = '/chatbot';
   static const String profile = '/profile';
   static const String routeOptions = '/route-options';
+  static const String routeResults = '/route-results';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -37,6 +40,18 @@ class AppRoutes {
           builder: (_) => const Scaffold(
             body: RewardsPage(),
           ),
+        );
+      case routeResults:
+        final routeResponse = settings.arguments as RouteResponse?;
+        if (routeResponse == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(child: Text('Route data not found')),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => RouteResultsPage(routeResponse: routeResponse),
         );
       default:
         return MaterialPageRoute(

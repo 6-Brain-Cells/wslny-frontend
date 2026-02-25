@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
+import '../config/env.dart';
 
 class ApiService {
-  final String baseUrl = AppConstants.apiBaseUrl;
+  final String baseUrl = Env.backendApiBaseUrl;
 
   // Get headers with auth token
   Future<Map<String, String>> _getHeaders({bool includeAuth = true}) async {
@@ -59,7 +61,8 @@ class ApiService {
       final uri = Uri.parse('$baseUrl$endpoint');
       final headers = await _getHeaders(includeAuth: includeAuth);
 
-      debugPrint('POST URL: $uri');
+      debugPrint('🚀 POST Request Details:');
+      debugPrint('URL: $uri');
       debugPrint('Headers: $headers');
       debugPrint('Body: ${body != null ? json.encode(body) : null}');
 
@@ -71,9 +74,16 @@ class ApiService {
           )
           .timeout(Duration(milliseconds: AppConstants.apiTimeout));
 
+      debugPrint('✅ Response received - Status: ${response.statusCode}');
       return _handleResponse(response);
+    } on http.ClientException catch (e) {
+      debugPrint('❌ ClientException (likely CORS or network): $e');
+      throw Exception('Network error: Unable to connect to server. This might be a CORS issue or the server is not reachable. Details: $e');
+    } on TimeoutException catch (e) {
+      debugPrint('❌ TimeoutException: $e');
+      throw Exception('Request timeout: The server took too long to respond. Please try again.');
     } catch (e) {
-      debugPrint('POST request error: $e');
+      debugPrint('❌ POST request error: $e');
       throw Exception('POST request failed: $e');
     }
   }
