@@ -10,6 +10,7 @@ import 'config/routes.dart';
 import 'l10n/app_localizations.dart';
 import 'providers/auth_provider.dart';
 import 'providers/language_provider.dart';
+import 'providers/theme_provider.dart';
 import 'utils/load_google_maps.dart';
 
 Future<void> main() async {
@@ -54,17 +55,18 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => LanguageProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
-      child: Consumer<LanguageProvider>(
-        builder: (context, languageProvider, child) {
+      child: Consumer2<LanguageProvider, ThemeProvider>(
+        builder: (context, languageProvider, themeProvider, child) {
           return MaterialApp(
             title: 'Wslny',
             debugShowCheckedModeBanner: false,
             
-            // Theme
             theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: themeProvider.themeMode,
             
-            // Localization
             locale: languageProvider.locale,
             localizationsDelegates: const [
               AppLocalizations.delegate,
@@ -77,8 +79,8 @@ class MyApp extends StatelessWidget {
               Locale('ar'), // Arabic
             ],
             
-            // Routing
-            initialRoute: AppRoutes.languageSelection,
+            // Routing (init checks stored token and goes to main or language)
+            initialRoute: AppRoutes.init,
             onGenerateRoute: AppRoutes.generateRoute,
             
             // Builder for RTL support
@@ -96,3 +98,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

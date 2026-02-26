@@ -8,6 +8,7 @@ class AppConstants {
 
   // Storage Keys
   static const String languageKey = 'selected_language';
+  static const String themeModeKey = 'theme_mode'; // 'light', 'dark', 'system'
   static const String authTokenKey = 'auth_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String userIdKey = 'user_id';

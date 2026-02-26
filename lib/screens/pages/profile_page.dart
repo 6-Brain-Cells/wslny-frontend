@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/providers/auth_provider.dart';
+import 'package:wslny/providers/theme_provider.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -36,7 +37,11 @@ class ProfilePage extends StatelessWidget {
             const SizedBox(height: 16),
             _QuickSettingsCard(
               onLanguageTap: () {
-                Navigator.pushNamed(context, AppRoutes.languageSelection);
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.languageSelection,
+                  arguments: true,
+                );
               },
             ),
             const SizedBox(height: 16),
@@ -359,17 +364,18 @@ class _QuickSettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 8, 16, 4),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -377,7 +383,7 @@ class _QuickSettingsCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -393,11 +399,7 @@ class _QuickSettingsCard extends StatelessWidget {
             hasSwitch: true,
             initialSwitchValue: true,
           ),
-          const _SettingsRow(
-            icon: Icons.dark_mode_outlined,
-            label: 'Dark Mode',
-            hasSwitch: true,
-          ),
+          _DarkModeRow(),
           const _SettingsRow(
             icon: Icons.lock_outline,
             label: 'Privacy & Security',
@@ -411,6 +413,40 @@ class _QuickSettingsCard extends StatelessWidget {
             label: 'About Wslny',
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DarkModeRow extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider>();
+    final isDark = themeProvider.isDark;
+    return ListTile(
+      leading: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Icon(Icons.dark_mode_outlined, size: 20, color: AppColors.primary),
+      ),
+      title: const Text(
+        'Dark Mode',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      trailing: Switch(
+        value: isDark,
+        activeColor: AppColors.primary,
+        onChanged: (v) {
+          themeProvider.setThemeMode(v ? ThemeMode.dark : ThemeMode.light);
+        },
       ),
     );
   }

@@ -4,12 +4,14 @@ import 'package:wslny/screens/pages/chatbot_page.dart';
 import 'package:wslny/screens/pages/profile_page.dart';
 import 'package:wslny/screens/pages/rewards_page.dart';
 import 'package:wslny/screens/pages/route_results_page.dart';
+import '../screens/auth/init_screen.dart';
 import '../screens/auth/language_selection_screen.dart';
 import '../screens/auth/sign_in_screen.dart';
 import '../screens/auth/sign_up_screen.dart';
 import '../models/route_models.dart';
 
 class AppRoutes {
+  static const String init = '/init';
   static const String languageSelection = '/';
   static const String signIn = '/sign-in';
   static const String signUp = '/sign-up';
@@ -21,6 +23,10 @@ class AppRoutes {
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
+      case init:
+        return MaterialPageRoute(
+          builder: (_) => const InitScreen(),
+        );
       case languageSelection:
         return MaterialPageRoute(
           builder: (_) => const LanguageSelectionScreen(),

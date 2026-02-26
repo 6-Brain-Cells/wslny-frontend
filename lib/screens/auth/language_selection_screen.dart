@@ -11,11 +11,17 @@ import '../../widgets/common/language_button.dart';
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
 
+  /// True when opened from profile (user already authenticated).
+  static bool isFromProfile(BuildContext context) {
+    return ModalRoute.of(context)?.settings.arguments == true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    
+    final fromProfile = isFromProfile(context);
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -69,7 +75,11 @@ class LanguageSelectionScreen extends StatelessWidget {
                 onTap: () async {
                   await languageProvider.setLanguage(AppConstants.englishCode);
                   if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                    if (fromProfile) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                    }
                   }
                 },
               ),
@@ -82,7 +92,11 @@ class LanguageSelectionScreen extends StatelessWidget {
                 onTap: () async {
                   await languageProvider.setLanguage(AppConstants.arabicCode);
                   if (context.mounted) {
-                    Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                    if (fromProfile) {
+                      Navigator.pop(context);
+                    } else {
+                      Navigator.pushReplacementNamed(context, AppRoutes.signIn);
+                    }
                   }
                 },
               ),

@@ -583,7 +583,7 @@ class _MapHomePageState extends State<MapHomePage> {
     }
 
     final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-    const delta = 0.018; // About 2km radius
+    const delta = 0.008; // ~1km radius to avoid Overpass 504 timeouts
     final sw = LatLng(center.latitude - delta, center.longitude - delta);
     final ne = LatLng(center.latitude + delta, center.longitude + delta);
 

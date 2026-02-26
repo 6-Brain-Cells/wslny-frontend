@@ -78,7 +78,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         );
 
         if (success && mounted) {
-          // Show success message
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Account created successfully!'),
@@ -86,13 +85,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
               duration: Duration(seconds: 2),
             ),
           );
-
-          // Navigate to login screen after a short delay
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) {
-              Navigator.of(context).pushReplacementNamed('/login');
-            }
-          });
+          // Navigate to home (main layout)
+          Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
         } else if (mounted && authProvider.error != null) {
           // Show error message
           ScaffoldMessenger.of(context).showSnackBar(

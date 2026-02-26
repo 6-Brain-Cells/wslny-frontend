@@ -5,17 +5,19 @@ import '../config/env.dart';
 import '../models/transit_stop.dart';
 
 class OverpassService {
-  static const int timeoutSeconds = 25;
+  static const int timeoutSeconds = 15;
 
   /// Fetch transit stops (bus, metro, platform) in a bounding box.
-  /// [southWest] and [northEast] define the box; ~2km from center is typical.
+  /// Uses a smaller area to avoid 504 timeouts from Overpass.
   Future<OverpassResult> getTransitStops(
     LatLng southWest,
     LatLng northEast,
   ) async {
     final base = Env.overpassBaseUrl;
+    // Shrink bbox slightly to reduce load and avoid 504
+    final pad = 0.002;
     final bbox =
-        '${southWest.latitude},${southWest.longitude},${northEast.latitude},${northEast.longitude}';
+        '${southWest.latitude + pad},${southWest.longitude + pad},${northEast.latitude - pad},${northEast.longitude - pad}';
 
     final query = '''
 [out:json][timeout:$timeoutSeconds];
@@ -29,55 +31,74 @@ class OverpassService {
 out body;
 ''';
 
-    try {
-      final response = await http.post(
-        Uri.parse(base),
-        body: {'data': query},
-        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      ).timeout(Duration(seconds: timeoutSeconds + 5));
+    const maxAttempts = 2;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        final response = await http.post(
+          Uri.parse(base),
+          body: {'data': query},
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        ).timeout(Duration(seconds: timeoutSeconds + 10));
 
-      if (response.statusCode != 200) {
-        return OverpassResult.error(
-          'Transit request failed: ${response.statusCode}',
-        );
-      }
-
-      final data = json.decode(response.body) as Map<String, dynamic>;
-      final elements = data['elements'] as List<dynamic>? ?? [];
-      final stops = <TransitStop>[];
-
-      for (final e in elements) {
-        final map = e as Map<String, dynamic>;
-        final lat = (map['lat'] as num?)?.toDouble();
-        final lon = (map['lon'] as num?)?.toDouble();
-        if (lat == null || lon == null) continue;
-
-        final id = map['id']?.toString() ?? '${lat}_$lon';
-        final tags = map['tags'] as Map<String, dynamic>? ?? {};
-        final name = (tags['name'] ?? tags['ref'] ?? 'Transit stop').toString();
-
-        TransitStopType type = TransitStopType.platform;
-        if (tags['railway'] == 'station' || tags['railway'] == 'halt') {
-          type = TransitStopType.metro;
-        } else if (tags['highway'] == 'bus_stop' ||
-            tags['public_transport'] == 'platform') {
-          type = tags['railway'] != null
-              ? TransitStopType.metro
-              : TransitStopType.bus;
+        if (response.statusCode == 504 || response.statusCode == 502) {
+          if (attempt < maxAttempts) continue;
+          return OverpassResult.error(
+            'Transit service is busy. Please try again in a moment.',
+          );
         }
 
-        stops.add(TransitStop(
-          id: id,
-          position: LatLng(lat, lon),
-          name: name,
-          type: type,
-        ));
-      }
+        if (response.statusCode != 200) {
+          return OverpassResult.error(
+            'Transit request failed. Please try again.',
+          );
+        }
 
-      return OverpassResult.success(stops);
-    } catch (e) {
-      return OverpassResult.error('Transit error: $e');
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final elements = data['elements'] as List<dynamic>? ?? [];
+        final stops = <TransitStop>[];
+
+        for (final e in elements) {
+          final map = e as Map<String, dynamic>;
+          final lat = (map['lat'] as num?)?.toDouble();
+          final lon = (map['lon'] as num?)?.toDouble();
+          if (lat == null || lon == null) continue;
+
+          final id = map['id']?.toString() ?? '${lat}_$lon';
+          final tags = map['tags'] as Map<String, dynamic>? ?? {};
+          final name = (tags['name'] ?? tags['ref'] ?? 'Transit stop').toString();
+
+          TransitStopType type = TransitStopType.platform;
+          if (tags['railway'] == 'station' || tags['railway'] == 'halt') {
+            type = TransitStopType.metro;
+          } else if (tags['highway'] == 'bus_stop' ||
+              tags['public_transport'] == 'platform') {
+            type = tags['railway'] != null
+                ? TransitStopType.metro
+                : TransitStopType.bus;
+          }
+
+          stops.add(TransitStop(
+            id: id,
+            position: LatLng(lat, lon),
+            name: name,
+            type: type,
+          ));
+        }
+
+        return OverpassResult.success(stops);
+      } on Exception catch (e) {
+        if (attempt >= maxAttempts) {
+          return OverpassResult.error(
+            e.toString().contains('timeout') || e.toString().contains('504')
+                ? 'Transit service is busy. Please try again in a moment.'
+                : 'Could not load transit stops. Please try again.',
+          );
+        }
+      }
     }
+    return OverpassResult.error(
+      'Could not load transit stops. Please try again.',
+    );
   }
 }
 

@@ -68,20 +68,22 @@ class _SignInScreenState extends State<SignInScreen> {
         } else if (errorMessage.contains('Network error')) {
           errorMessage =
               'Network connection error. Please check your internet connection and try again.';
-        } else if (errorMessage.contains('timeout')) {
+        } else         if (errorMessage.contains('timeout')) {
           errorMessage = 'Request timed out. Please try again.';
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
           SnackBar(
             content: Text(errorMessage),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
             action: SnackBarAction(
               label: 'Dismiss',
               textColor: Colors.white,
               onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                messenger.hideCurrentSnackBar();
               },
             ),
           ),
@@ -117,16 +119,18 @@ class _SignInScreenState extends State<SignInScreen> {
         errorMessage = 'Google sign-in failed. Please try again.';
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
           content: Text(errorMessage),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
           action: SnackBarAction(
             label: 'Dismiss',
             textColor: Colors.white,
             onPressed: () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              messenger.hideCurrentSnackBar();
             },
           ),
         ),
