@@ -1,13 +1,88 @@
 import 'package:flutter/material.dart';
 import 'package:wslny/config/app_colors.dart';
+import 'package:wslny/models/route_models.dart';
+import 'package:wslny/services/chat_storage_service.dart';
+import 'route_results_page.dart';
 
-class FavoritesPage extends StatelessWidget {
+class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    const hasRoutes = true; // toggle list / empty if needed
+  State<FavoritesPage> createState() => _FavoritesPageState();
+}
 
+class _FavoritesPageState extends State<FavoritesPage> {
+  List<Map<String, dynamic>> _savedRoutes = [];
+  bool _isLoading = true;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedRoutes();
+  }
+
+  Future<void> _loadSavedRoutes() async {
+    try {
+      final savedRoutes = await ChatStorageService.loadFavoriteRoutes();
+      
+      setState(() {
+        _savedRoutes = savedRoutes;
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('Error loading saved routes: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  List<Map<String, dynamic>> get _filteredRoutes {
+    if (_searchQuery.isEmpty) return _savedRoutes;
+
+    return _savedRoutes.where((route) {
+      final customName = route['customName']?.toString().toLowerCase() ?? '';
+      final fromName = route['routeResponse']['from_name']?.toString().toLowerCase() ?? '';
+      final toName = route['routeResponse']['to_name']?.toString().toLowerCase() ?? '';
+      
+      return customName.contains(_searchQuery.toLowerCase()) ||
+             fromName.contains(_searchQuery.toLowerCase()) ||
+             toName.contains(_searchQuery.toLowerCase());
+    }).toList();
+  }
+
+  Future<void> _removeFavoriteRoute(String requestId) async {
+    try {
+      await ChatStorageService.removeFavoriteRoute(requestId);
+      await _loadSavedRoutes(); // Refresh the list
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Route removed from favorites')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to remove favorite')),
+        );
+      }
+    }
+  }
+
+  void _navigateToRoute(Map<String, dynamic> favoriteData) {
+    final routeResponse = RouteResponse.fromJson(favoriteData['routeResponse'] as Map<String, dynamic>);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RouteResultsPage(routeResponse: routeResponse),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -19,91 +94,61 @@ class FavoritesPage extends StatelessWidget {
                 Text(
                   'Favorites',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
-                      ),
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const Spacer(),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.border),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.cloud_off, size: 16, color: AppColors.textHint),
-                      SizedBox(width: 4),
-                      Text(
-                        'Offline',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+                  child: Text(
+                    '${_savedRoutes.length} routes',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: Text(
-              'Your saved routes',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-            ),
-          ),
-          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: _SearchBar(
-              hint: 'Search saved routes...',
+              hint: 'Search favorite routes...',
+              onChanged: (query) {
+                setState(() {
+                  _searchQuery = query;
+                });
+              },
             ),
           ),
           const SizedBox(height: 12),
           Expanded(
-            child: hasRoutes
-                ? ListView(
-                    padding:
-                        const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    children: const [
-                      _FavoriteRouteCard(
-                        badge: 'Home (Heliopolis)',
-                        from: 'Heliopolis',
-                        to: 'Nasr City',
-                        time: '42 min',
-                        price: '5 EGP',
-                        status: 'Available',
-                      ),
-                      SizedBox(height: 10),
-                      _FavoriteRouteCard(
-                        badge: 'Work',
-                        from: 'Nasr City',
-                        to: 'Downtown',
-                        time: '38 min',
-                        price: '6 EGP',
-                        status: 'Available',
-                      ),
-                      SizedBox(height: 10),
-                      _FavoriteRouteCard(
-                        badge: 'Weekend',
-                        from: 'New Cairo',
-                        to: 'Zamalek',
-                        time: '55 min',
-                        price: '8 EGP',
-                        status: 'Offline',
-                      ),
-                      SizedBox(height: 20),
-                      _OfflineBanner(),
-                    ],
-                  )
-                : const _EmptyFavorites(),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _filteredRoutes.isEmpty
+                ? const _EmptyFavorites()
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                    children: _filteredRoutes
+                        .map(
+                          (favoriteData) => _SavedRouteCard(
+                            favoriteData: favoriteData,
+                            onTap: () => _navigateToRoute(favoriteData),
+                            onDelete: () => _removeFavoriteRoute(favoriteData['id'] as String),
+                          ),
+                        )
+                        .toList(),
+                  ),
           ),
         ],
       ),
@@ -113,8 +158,9 @@ class FavoritesPage extends StatelessWidget {
 
 class _SearchBar extends StatelessWidget {
   final String hint;
+  final ValueChanged<String>? onChanged;
 
-  const _SearchBar({required this.hint});
+  const _SearchBar({required this.hint, this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -137,37 +183,37 @@ class _SearchBar extends StatelessWidget {
                 border: InputBorder.none,
                 isDense: true,
               ),
+              onChanged: onChanged,
             ),
           ),
-          const SizedBox(width: 12),
         ],
       ),
     );
   }
 }
 
-class _FavoriteRouteCard extends StatelessWidget {
-  final String badge;
-  final String from;
-  final String to;
-  final String time;
-  final String price;
-  final String status;
+class _SavedRouteCard extends StatelessWidget {
+  final Map<String, dynamic> favoriteData;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
 
-  const _FavoriteRouteCard({
-    required this.badge,
-    required this.from,
-    required this.to,
-    required this.time,
-    required this.price,
-    required this.status,
+  const _SavedRouteCard({
+    required this.favoriteData,
+    required this.onTap,
+    required this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isAvailable = status.toLowerCase() == 'available';
+    final routeResponse = RouteResponse.fromJson(favoriteData['routeResponse'] as Map<String, dynamic>);
+    final customName = favoriteData['customName'] as String? ?? 'Saved Route';
+    
+    final fromName = routeResponse.fromName ?? 'Origin';
+    final toName = routeResponse.toName ?? 'Destination';
+    final routeInfo = routeResponse.route;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -179,49 +225,79 @@ class _FavoriteRouteCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.favorite,
-                  size: 18, color: AppColors.primary),
+              Icon(Icons.favorite, size: 18, color: AppColors.primary),
               const SizedBox(width: 6),
-              Text(
-                badge,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+              Expanded(
+                child: Text(
+                  customName,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
-              const Spacer(),
-              Icon(Icons.more_vert, size: 18, color: AppColors.textHint),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 18, color: AppColors.textHint),
+                onSelected: (value) {
+                  if (value == 'delete') {
+                    onDelete();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete, color: Colors.red, size: 16),
+                        SizedBox(width: 8),
+                        Text('Remove', style: TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
-            '$from → $to',
+            '$fromName → $toName',
             style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              fontSize: 12,
+              color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.schedule,
-                  size: 16, color: AppColors.textHint),
+              const Icon(Icons.schedule, size: 16, color: AppColors.textHint),
               const SizedBox(width: 4),
               Text(
-                time,
+                routeInfo.totalDurationFormatted,
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.attach_money,
-                  size: 16, color: AppColors.textHint),
+              const Icon(
+                Icons.attach_money,
+                size: 16,
+                color: AppColors.textHint,
+              ),
               const SizedBox(width: 4),
               Text(
-                price,
+                routeInfo.estimatedFareFormatted,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(Icons.straighten, size: 16, color: AppColors.textHint),
+              const SizedBox(width: 4),
+              Text(
+                routeInfo.totalDistanceFormatted,
                 style: const TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary,
@@ -232,107 +308,20 @@ class _FavoriteRouteCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isAvailable
-                      ? const Color(0xFFE8F5E9)
-                      : Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isAvailable ? Icons.check_circle : Icons.cloud_off,
-                      size: 14,
-                      color:
-                          isAvailable ? const Color(0xFF43A047) : AppColors.textHint,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      status,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: isAvailable
-                            ? const Color(0xFF2E7D32)
-                            : AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () {},
-                style: TextButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 8,
+              Expanded(
+                child: FilledButton(
+                  onPressed: onTap,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: const Text(
-                  'Use Route',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  child: const Text(
+                    'Use Route',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OfflineBanner extends StatelessWidget {
-  const _OfflineBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE3F2FD),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF90CAF9)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Icon(Icons.cloud_off, color: Color(0xFF1E88E5), size: 20),
-          SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Offline Mode',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'All your favorite routes are available without internet.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
           ),
         ],
       ),
@@ -346,46 +335,33 @@ class _EmptyFavorites extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.favorite_border_rounded,
-                size: 42,
-                color: AppColors.primary,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.favorite_border,
+            size: 64,
+            color: AppColors.textHint,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No favorite routes yet',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textSecondary,
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'No favorites yet',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Routes you save as favorites will appear here',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppColors.textHint,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Save routes you use often and they will appear here.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 13,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
-

@@ -38,11 +38,7 @@ class RouteLocation {
   final double lon;
   final String? name;
 
-  RouteLocation({
-    required this.lat,
-    required this.lon,
-    this.name,
-  });
+  RouteLocation({required this.lat, required this.lon, this.name});
 
   factory RouteLocation.fromJson(Map<String, dynamic> json) {
     return RouteLocation(
@@ -53,11 +49,7 @@ class RouteLocation {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'lat': lat,
-      'lon': lon,
-      if (name != null) 'name': name,
-    };
+    return {'lat': lat, 'lon': lon, if (name != null) 'name': name};
   }
 }
 
@@ -65,23 +57,19 @@ class RouteQuery {
   final RouteLocation origin;
   final RouteLocation destination;
 
-  RouteQuery({
-    required this.origin,
-    required this.destination,
-  });
+  RouteQuery({required this.origin, required this.destination});
 
   factory RouteQuery.fromJson(Map<String, dynamic> json) {
     return RouteQuery(
       origin: RouteLocation.fromJson(json['origin'] as Map<String, dynamic>),
-      destination: RouteLocation.fromJson(json['destination'] as Map<String, dynamic>),
+      destination: RouteLocation.fromJson(
+        json['destination'] as Map<String, dynamic>,
+      ),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'origin': origin.toJson(),
-      'destination': destination.toJson(),
-    };
+    return {'origin': origin.toJson(), 'destination': destination.toJson()};
   }
 }
 
@@ -100,23 +88,23 @@ class RouteRequest {
 
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {};
-    
+
     if (text != null) {
       json['text'] = text;
     }
-    
+
     if (filter != null) {
       json['filter'] = filter!.value;
     }
-    
+
     if (currentLatitude != null) {
       json['current_latitude'] = currentLatitude;
     }
-    
+
     if (currentLongitude != null) {
       json['current_longitude'] = currentLongitude;
     }
-    
+
     return json;
   }
 }
@@ -140,13 +128,28 @@ class RouteSegment {
 
   factory RouteSegment.fromJson(Map<String, dynamic> json) {
     return RouteSegment(
-      startLocation: RouteLocation.fromJson(json['startLocation'] as Map<String, dynamic>),
-      endLocation: RouteLocation.fromJson(json['endLocation'] as Map<String, dynamic>),
+      startLocation: RouteLocation.fromJson(
+        json['startLocation'] as Map<String, dynamic>,
+      ),
+      endLocation: RouteLocation.fromJson(
+        json['endLocation'] as Map<String, dynamic>,
+      ),
       method: json['method'] as String,
       numStops: json['numStops'] as int,
-      distanceMeters: json['distanceMeters'] as int,
+      distanceMeters: (json['distanceMeters'] as num).toInt(),
       durationSeconds: json['durationSeconds'] as int,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'startLocation': startLocation.toJson(),
+      'endLocation': endLocation.toJson(),
+      'method': method,
+      'numStops': numStops,
+      'distanceMeters': distanceMeters,
+      'durationSeconds': durationSeconds,
+    };
   }
 
   String get durationFormatted {
@@ -200,13 +203,27 @@ class RouteInfo {
       totalDurationSeconds: json['totalDurationSeconds'] as int,
       totalDurationFormatted: json['totalDurationFormatted'] as String,
       totalSegments: json['totalSegments'] as int,
-      totalDistanceMeters: json['totalDistanceMeters'] as int,
+      totalDistanceMeters: (json['totalDistanceMeters'] as num).toInt(),
       segments: (json['segments'] as List)
           .map((e) => RouteSegment.fromJson(e as Map<String, dynamic>))
           .toList(),
       estimatedFare: (json['estimatedFare'] as num).toDouble(),
-      walkDistanceMeters: json['walkDistanceMeters'] as int,
+      walkDistanceMeters: (json['walkDistanceMeters'] as num).toInt(),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type,
+      'found': found,
+      'totalDurationSeconds': totalDurationSeconds,
+      'totalDurationFormatted': totalDurationFormatted,
+      'totalSegments': totalSegments,
+      'totalDistanceMeters': totalDistanceMeters,
+      'segments': segments.map((s) => s.toJson()).toList(),
+      'estimatedFare': estimatedFare,
+      'walkDistanceMeters': walkDistanceMeters,
+    };
   }
 
   String get totalDistanceFormatted {
@@ -237,8 +254,8 @@ class RouteResponse {
   final String source;
   final String intent;
   final int filter;
-  final String fromName;
-  final String toName;
+  final String? fromName;
+  final String? toName;
   final RouteQuery query;
   final RouteInfo route;
 
@@ -247,8 +264,8 @@ class RouteResponse {
     required this.source,
     required this.intent,
     required this.filter,
-    required this.fromName,
-    required this.toName,
+    this.fromName,
+    this.toName,
     required this.query,
     required this.route,
   });
@@ -259,10 +276,23 @@ class RouteResponse {
       source: json['source'] as String,
       intent: json['intent'] as String,
       filter: json['filter'] as int,
-      fromName: json['from_name'] as String,
-      toName: json['to_name'] as String,
+      fromName: json['from_name'] as String?,
+      toName: json['to_name'] as String?,
       query: RouteQuery.fromJson(json['query'] as Map<String, dynamic>),
       route: RouteInfo.fromJson(json['route'] as Map<String, dynamic>),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'request_id': requestId,
+      'source': source,
+      'intent': intent,
+      'filter': filter,
+      'from_name': fromName,
+      'to_name': toName,
+      'query': query.toJson(),
+      'route': route.toJson(),
+    };
   }
 }

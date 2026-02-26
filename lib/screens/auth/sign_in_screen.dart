@@ -46,15 +46,46 @@ class _SignInScreenState extends State<SignInScreen> {
       );
 
       if (success && mounted) {
-        // Navigate to home screen (to be implemented later)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Sign in successful!')));
+        // Navigate to home screen
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Sign in successful!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
         Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
       } else if (mounted && authProvider.error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
+        String errorMessage = authProvider.error!;
+
+        // Improve error messages for better UX
+        if (errorMessage.contains('Invalid email or password')) {
+          errorMessage =
+              'Invalid email or password. Please check your credentials and try again.';
+        } else if (errorMessage.contains('Unauthorized')) {
+          errorMessage =
+              'Invalid email or password. Please check your credentials and try again.';
+        } else if (errorMessage.contains('Network error')) {
+          errorMessage =
+              'Network connection error. Please check your internet connection and try again.';
+        } else if (errorMessage.contains('timeout')) {
+          errorMessage = 'Request timed out. Please try again.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
+        );
       }
     }
   }
@@ -66,12 +97,40 @@ class _SignInScreenState extends State<SignInScreen> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Google sign in successful!')),
+        const SnackBar(
+          content: Text('Google sign in successful!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
       );
+      Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
     } else if (mounted && authProvider.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
+      String errorMessage = authProvider.error!;
+
+      // Improve error messages for better UX
+      if (errorMessage.contains('Network error')) {
+        errorMessage =
+            'Network connection error. Please check your internet connection and try again.';
+      } else if (errorMessage.contains('timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (errorMessage.contains('Google sign-in')) {
+        errorMessage = 'Google sign-in failed. Please try again.';
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
+        ),
+      );
     }
   }
 

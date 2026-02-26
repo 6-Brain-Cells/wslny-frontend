@@ -1,6 +1,10 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/routes.dart';
+import 'package:wslny/models/transit_stop.dart';
+import 'package:wslny/services/overpass_service.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -63,27 +67,27 @@ class _SearchCardState extends State<_SearchCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.directions_transit_outlined,
-                  color: AppColors.primary),
+              const Icon(
+                Icons.directions_transit_outlined,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 8),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Wslny',
-                    style:
-                        Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Where to today?',
-                    style:
-                        Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.textSecondary,
-                            ),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ],
               ),
@@ -119,8 +123,10 @@ class _SearchCardState extends State<_SearchCard> {
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1ABC9C),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
@@ -132,10 +138,7 @@ class _SearchCardState extends State<_SearchCard> {
                   SizedBox(width: 6),
                   Text(
                     'Find Routes',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
                   ),
                 ],
               ),
@@ -208,17 +211,17 @@ class _SearchField extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                    ),
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ],
           ),
@@ -297,10 +300,7 @@ class _RoundIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _RoundIconButton({
-    required this.icon,
-    required this.onTap,
-  });
+  const _RoundIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -321,11 +321,7 @@ class _RoundIconButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(
-          icon,
-          size: 18,
-          color: AppColors.textSecondary,
-        ),
+        child: Icon(icon, size: 18, color: AppColors.textSecondary),
       ),
     );
   }
@@ -390,19 +386,17 @@ class _HeroImageCard extends StatelessWidget {
                   children: [
                     Text(
                       'Nearby metro & bus stops',
-                      style:
-                          Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Plan your next route in seconds.',
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodySmall
-                          ?.copyWith(color: Colors.white70),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: Colors.white70),
                     ),
                   ],
                 ),
@@ -435,15 +429,179 @@ class _HeroImageCard extends StatelessWidget {
   }
 }
 
-class _NearbyStationsSection extends StatelessWidget {
+class _NearbyStationsSection extends StatefulWidget {
   const _NearbyStationsSection();
 
   @override
+  State<_NearbyStationsSection> createState() => _NearbyStationsSectionState();
+}
+
+class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
+  List<TransitStop> _nearbyStations = [];
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNearbyStations();
+  }
+
+  Future<void> _loadNearbyStations() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      // Get current location (you might want to use LocationService here)
+      // For now, let's use Cairo center as default
+      final currentLocation = LatLng(30.0444, 31.2357);
+
+      // Define search area (around 5km radius)
+      final southWest = LatLng(
+        currentLocation.latitude - 0.05,
+        currentLocation.longitude - 0.05,
+      );
+      final northEast = LatLng(
+        currentLocation.latitude + 0.05,
+        currentLocation.longitude + 0.05,
+      );
+
+      final overpassService = OverpassService();
+      final result = await overpassService.getTransitStops(
+        southWest,
+        northEast,
+      );
+
+      if (!mounted) return;
+
+      if (result.isSuccess) {
+        // Filter for metro stations only and sort by distance
+        final metroStations = result.stops
+            .where((stop) => stop.type == TransitStopType.metro)
+            .toList();
+
+        // Sort by distance from current location
+        metroStations.sort((a, b) {
+          final distanceA = _calculateDistance(currentLocation, a.position);
+          final distanceB = _calculateDistance(currentLocation, b.position);
+          return distanceA.compareTo(distanceB);
+        });
+
+        // Take only the nearest 5 stations
+        setState(() {
+          _nearbyStations = metroStations.take(5).toList();
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = result.error;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Failed to load nearby stations';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  double _calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+
+    final double lat1Rad = point1.latitude * math.pi / 180;
+    final double lat2Rad = point2.latitude * math.pi / 180;
+    final double deltaLatRad =
+        (point2.latitude - point1.latitude) * math.pi / 180;
+    final double deltaLngRad =
+        (point2.longitude - point1.longitude) * math.pi / 180;
+
+    final double a =
+        math.sin(deltaLatRad / 2) * math.sin(deltaLatRad / 2) +
+        math.cos(lat1Rad) *
+            math.cos(lat2Rad) *
+            math.sin(deltaLngRad / 2) *
+            math.sin(deltaLngRad / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c; // Distance in meters
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nearby Stations',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 12),
+          Center(child: CircularProgressIndicator()),
+        ],
+      );
+    }
+
+    if (_error != null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Nearby Stations',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Error: $_error',
+            style: const TextStyle(color: Colors.red, fontSize: 14),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _loadNearbyStations,
+            child: const Text('Retry'),
+          ),
+        ],
+      );
+    }
+
+    if (_nearbyStations.isEmpty) {
+      return const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Nearby Stations',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          SizedBox(height: 12),
+          Text(
+            'No nearby stations found',
+            style: TextStyle(color: AppColors.textHint, fontSize: 14),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text(
+      children: [
+        const Text(
           'Nearby Stations',
           style: TextStyle(
             fontSize: 16,
@@ -451,24 +609,26 @@ class _NearbyStationsSection extends StatelessWidget {
             color: AppColors.textPrimary,
           ),
         ),
-        SizedBox(height: 12),
-        _StationCard(
-          name: 'Tahrir Square Metro',
-          distance: '0.2 km',
-          line: 'Line 2',
-        ),
-        SizedBox(height: 8),
-        _StationCard(
-          name: 'Ramses Station',
-          distance: '1.6 km',
-          line: 'Line 1',
-        ),
-        SizedBox(height: 8),
-        _StationCard(
-          name: 'Monib Station',
-          distance: '3.4 km',
-          line: 'Line 3',
-        ),
+        const SizedBox(height: 12),
+        ..._nearbyStations.asMap().entries.map((entry) {
+          final index = entry.key;
+          final station = entry.value;
+          final distance = _calculateDistance(
+            LatLng(30.0444, 31.2357), // Current location
+            station.position,
+          );
+
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: index < _nearbyStations.length - 1 ? 8.0 : 0.0,
+            ),
+            child: _StationCard(
+              name: station.name,
+              distance: '${(distance / 1000).toStringAsFixed(1)} km',
+              line: 'Metro', // You might want to determine the actual line
+            ),
+          );
+        }),
       ],
     );
   }
@@ -525,8 +685,11 @@ class _StationCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.place_outlined,
-                        size: 14, color: AppColors.textHint),
+                    Icon(
+                      Icons.place_outlined,
+                      size: 14,
+                      color: AppColors.textHint,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       distance,
@@ -597,10 +760,7 @@ class _RecentRouteTile extends StatelessWidget {
   final String title;
   final String subtitle;
 
-  const _RecentRouteTile({
-    required this.title,
-    required this.subtitle,
-  });
+  const _RecentRouteTile({required this.title, required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -644,4 +804,3 @@ class _RecentRouteTile extends StatelessWidget {
     );
   }
 }
-

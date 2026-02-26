@@ -1,17 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import 'package:wslny/config/app_colors.dart';
-import 'package:wslny/config/env.dart';
-import 'package:wslny/models/transit_stop.dart';
-import 'package:wslny/models/route_models.dart';
-import 'package:wslny/services/geocoding_service.dart';
-import 'package:wslny/services/location_service.dart';
-import 'package:wslny/services/osrm_service.dart';
-import 'package:wslny/services/route_service.dart';
-import 'package:wslny/config/routes.dart';
+import '../../config/app_colors.dart';
+import '../../models/route_models.dart';
+import '../../models/transit_stop.dart';
+import '../../services/route_service.dart';
+import '../../services/osrm_service.dart';
+import '../../services/location_service.dart';
+import '../../services/geocoding_service.dart';
+import 'package:wslny/config/routes.dart' as routes;
 import 'package:wslny/services/overpass_service.dart';
 
 enum PointPickMode { start, end }
@@ -52,7 +52,6 @@ class _MapHomePageState extends State<MapHomePage> {
   bool _showTransit = false;
   bool _isLoadingTransit = false;
   String? _transitError;
-  List<TransitStop> _transitStops = [];
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _searchingLocation = false;
@@ -145,19 +144,9 @@ class _MapHomePageState extends State<MapHomePage> {
       );
     }
 
-    // Transit stop markers
-    for (final s in _transitStops) {
-      final hue = s.type == TransitStopType.bus
-          ? BitmapDescriptor.hueOrange
-          : BitmapDescriptor.hueViolet;
-      m.add(
-        Marker(
-          markerId: MarkerId('transit_${s.id}'),
-          position: s.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(hue),
-          infoWindow: InfoWindow(title: s.name, snippet: '${s.type.name} stop'),
-        ),
-      );
+    // Transit markers (metro and bus stations)
+    if (_showTransit && _transitError == null) {
+      _addTransitMarkers(m);
     }
 
     setState(
@@ -165,6 +154,11 @@ class _MapHomePageState extends State<MapHomePage> {
         ..clear()
         ..addAll(m),
     );
+  }
+
+  void _addTransitMarkers(Set<Marker> markers) {
+    // This will be populated when we fetch transit data
+    // For now, we'll add the transit markers in the _toggleTransit method
   }
 
   void _updatePolyline() {
@@ -227,27 +221,119 @@ class _MapHomePageState extends State<MapHomePage> {
 
   Future<void> _fetchRoute() async {
     if (_start == null || _end == null) return;
+
     setState(() {
       _isRouting = true;
       _routeError = null;
     });
-    final result = await _osrmService.getRoute(_start!, _end!);
-    if (!mounted) return;
-    setState(() {
-      _isRouting = false;
-      if (result.isSuccess) {
-        _routePoints = result.points;
-        _routeDistanceKm = result.distanceKm;
+
+    try {
+      // Use RouteService to get multi-modal transit routes
+      final routeResponse = await _routeService.getRouteByCoordinates(
+        originLat: _start!.latitude,
+        originLon: _start!.longitude,
+        destinationLat: _end!.latitude,
+        destinationLon: _end!.longitude,
+        filter: RouteFilter.optimal, // You can make this configurable
+        currentLatitude: _myLocation?.latitude,
+        currentLongitude: _myLocation?.longitude,
+      );
+
+      debugPrint('🚌 Backend Route Response:');
+      debugPrint('  - Request ID: ${routeResponse.requestId}');
+      debugPrint('  - From: ${routeResponse.fromName}');
+      debugPrint('  - To: ${routeResponse.toName}');
+      debugPrint(
+        '  - Total Duration: ${routeResponse.route.totalDurationFormatted}',
+      );
+      debugPrint(
+        '  - Total Distance: ${routeResponse.route.totalDistanceMeters}m',
+      );
+      debugPrint(
+        '  - Estimated Fare: ${routeResponse.route.estimatedFareFormatted}',
+      );
+      debugPrint(
+        '  - Number of Segments: ${routeResponse.route.segments.length}',
+      );
+
+      // Print segment details
+      for (int i = 0; i < routeResponse.route.segments.length; i++) {
+        final segment = routeResponse.route.segments[i];
+        debugPrint('  - Segment $i: ${segment.method}');
+        debugPrint('    * From: ${segment.startLocation.name}');
+        debugPrint('    * To: ${segment.endLocation.name}');
+        debugPrint('    * Duration: ${segment.durationSeconds}s');
+        debugPrint('    * Distance: ${segment.distanceMeters}m');
+        debugPrint('    * Stops: ${segment.numStops}');
+      }
+
+      if (!mounted) return;
+
+      // Now use OSRM for each segment to get realistic paths
+      final List<LatLng> allRoutePoints = [];
+
+      for (int i = 0; i < routeResponse.route.segments.length; i++) {
+        final segment = routeResponse.route.segments[i];
+
+        try {
+          final osrmResult = await _osrmService.getRoute(
+            LatLng(segment.startLocation.lat, segment.startLocation.lon),
+            LatLng(segment.endLocation.lat, segment.endLocation.lon),
+          );
+
+          if (osrmResult.isSuccess && osrmResult.points.isNotEmpty) {
+            // Add OSRM points for this segment
+            if (i > 0) {
+              // Remove duplicate point between segments
+              allRoutePoints.addAll(osrmResult.points.skip(1));
+            } else {
+              allRoutePoints.addAll(osrmResult.points);
+            }
+            debugPrint(
+              '✅ Segment $i: Got ${osrmResult.points.length} OSRM points',
+            );
+          } else {
+            // Fallback to straight line
+            allRoutePoints.add(
+              LatLng(segment.startLocation.lat, segment.startLocation.lon),
+            );
+            allRoutePoints.add(
+              LatLng(segment.endLocation.lat, segment.endLocation.lon),
+            );
+            debugPrint('❌ Segment $i: OSRM failed, using straight line');
+          }
+        } catch (e) {
+          debugPrint('❌ Segment $i OSRM error: $e');
+          // Fallback to straight line
+          allRoutePoints.add(
+            LatLng(segment.startLocation.lat, segment.startLocation.lon),
+          );
+          allRoutePoints.add(
+            LatLng(segment.endLocation.lat, segment.endLocation.lon),
+          );
+        }
+      }
+
+      setState(() {
+        _isRouting = false;
+        _routePoints = allRoutePoints;
+        _routeDistanceKm = routeResponse.route.totalDistanceMeters / 1000.0;
         _routeError = null;
         _updatePolyline();
         _fitRouteBounds();
-      } else {
-        _routeError = result.error;
+      });
+    } catch (e) {
+      debugPrint('❌ Route request failed: $e');
+      if (!mounted) return;
+
+      setState(() {
+        _isRouting = false;
+        _routeError = 'Failed to get route: $e';
         _routePoints = [];
         _routeDistanceKm = null;
         _updatePolyline();
-      }
-    });
+      });
+    }
   }
 
   void _fitRouteBounds() {
@@ -329,7 +415,17 @@ class _MapHomePageState extends State<MapHomePage> {
   }
 
   Future<void> _requestRoute() async {
-    // Check if we have at least an end point
+    // Check if we have both start and end points
+    if (_start == null && _end == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select start and destination points'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     if (_end == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -340,34 +436,37 @@ class _MapHomePageState extends State<MapHomePage> {
       return;
     }
 
-    // Use current location as start if no start point is selected
-    LatLng? startPoint = _start;
-    if (startPoint == null) {
-      if (_myLocation == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Please wait for location to be detected or select a start point'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return;
-      }
-      startPoint = _myLocation;
+    if (_start == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a start point'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
     }
 
-    // Show route filter selection dialog
-    final filter = await _showRouteFilterDialog();
-    if (filter == null) return;
+    // Show filter selection dialog
+    final selectedFilter = await _showRouteFilterDialog();
+    if (selectedFilter == null) return; // User cancelled
+
+    // Get route with selected filter
+    await _fetchRouteWithFilter(selectedFilter);
+  }
+
+  Future<void> _fetchRouteWithFilter(RouteFilter filter) async {
+    if (_start == null || _end == null) return;
+
+    setState(() {
+      _isRouting = true;
+      _routeError = null;
+    });
 
     try {
-      setState(() {
-        _isRouting = true;
-        _routeError = null;
-      });
-
+      // Use RouteService to get multi-modal transit routes
       final routeResponse = await _routeService.getRouteByCoordinates(
-        originLat: startPoint!.latitude,
-        originLon: startPoint.longitude,
+        originLat: _start!.latitude,
+        originLon: _start!.longitude,
         destinationLat: _end!.latitude,
         destinationLon: _end!.longitude,
         filter: filter,
@@ -375,19 +474,52 @@ class _MapHomePageState extends State<MapHomePage> {
         currentLongitude: _myLocation?.longitude,
       );
 
-      if (mounted) {
-        // Navigate to route results screen
-        Navigator.pushNamed(
-          context,
-          AppRoutes.routeResults,
-          arguments: routeResponse,
-        );
+      debugPrint('🚌 Backend Route Response:');
+      debugPrint('  - Request ID: ${routeResponse.requestId}');
+      debugPrint('  - From: ${routeResponse.fromName}');
+      debugPrint('  - To: ${routeResponse.toName}');
+      debugPrint(
+        '  - Total Duration: ${routeResponse.route.totalDurationFormatted}',
+      );
+      debugPrint(
+        '  - Total Distance: ${routeResponse.route.totalDistanceMeters}m',
+      );
+      debugPrint(
+        '  - Estimated Fare: ${routeResponse.route.estimatedFareFormatted}',
+      );
+      debugPrint(
+        '  - Number of Segments: ${routeResponse.route.segments.length}',
+      );
+
+      // Print segment details
+      for (int i = 0; i < routeResponse.route.segments.length; i++) {
+        final segment = routeResponse.route.segments[i];
+        debugPrint('  - Segment $i: ${segment.method}');
+        debugPrint('    * From: ${segment.startLocation.name}');
+        debugPrint('    * To: ${segment.endLocation.name}');
+        debugPrint('    * Duration: ${segment.durationSeconds}s');
+        debugPrint('    * Distance: ${segment.distanceMeters}m');
+        debugPrint('    * Stops: ${segment.numStops}');
       }
+
+      if (!mounted) return;
+
+      // Navigate to route results page
+      Navigator.pushNamed(
+        context,
+        routes.AppRoutes.routeResults,
+        arguments: routeResponse,
+      );
     } catch (e) {
+      debugPrint('Route request failed: $e');
       if (mounted) {
         setState(() {
-          _routeError = e.toString();
+          _isRouting = false;
+          _routeError = 'Failed to get route: $e';
+          _routePoints = [];
+          _routeDistanceKm = null;
         });
+        _updatePolyline();
       }
     } finally {
       if (mounted) {
@@ -444,34 +576,116 @@ class _MapHomePageState extends State<MapHomePage> {
     if (_showTransit) {
       setState(() {
         _showTransit = false;
-        _transitStops = [];
         _transitError = null;
       });
       _updateMarkers();
       return;
     }
+
     final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-    const delta = 0.018;
+    const delta = 0.018; // About 2km radius
     final sw = LatLng(center.latitude - delta, center.longitude - delta);
     final ne = LatLng(center.latitude + delta, center.longitude + delta);
+
     setState(() {
       _showTransit = true;
       _isLoadingTransit = true;
       _transitError = null;
     });
-    final result = await _overpassService.getTransitStops(sw, ne);
-    if (!mounted) return;
-    setState(() {
-      _isLoadingTransit = false;
-      if (result.isSuccess) {
-        _transitStops = result.stops;
-        _transitError = null;
-      } else {
-        _transitError = result.error;
-        _transitStops = [];
+
+    try {
+      final result = await _overpassService.getTransitStops(sw, ne);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingTransit = false;
+        if (result.isSuccess) {
+          _transitError = null;
+          // Add transit markers directly here
+          _addTransitStationsToMap(result.stops, center);
+        } else {
+          _transitError = result.error;
+        }
+      });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoadingTransit = false;
+          _transitError = 'Failed to load transit stations: $e';
+        });
       }
-    });
+    }
+
     _updateMarkers();
+  }
+
+  void _addTransitStationsToMap(List<TransitStop> stations, LatLng center) {
+    // Sort stations by distance from center
+    stations.sort((a, b) {
+      final distanceA = _calculateDistance(center, a.position);
+      final distanceB = _calculateDistance(center, b.position);
+      return distanceA.compareTo(distanceB);
+    });
+
+    // Add markers for each station
+    for (int i = 0; i < stations.length; i++) {
+      final station = stations[i];
+      final distance = _calculateDistance(center, station.position);
+
+      // Only show stations within 2km
+      if (distance > 2000) continue;
+
+      final markerColor = station.type == TransitStopType.metro
+          ? BitmapDescriptor.hueViolet
+          : station.type == TransitStopType.bus
+          ? BitmapDescriptor.hueOrange
+          : BitmapDescriptor.hueBlue;
+
+      _markers.add(
+        Marker(
+          markerId: MarkerId('transit_${station.type.name}_$i'),
+          position: station.position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
+          infoWindow: InfoWindow(
+            title: _getTransitStationTitle(station),
+            snippet: '${(distance / 1000).toStringAsFixed(1)} km away',
+          ),
+        ),
+      );
+    }
+  }
+
+  String _getTransitStationTitle(TransitStop station) {
+    switch (station.type) {
+      case TransitStopType.metro:
+        return '🚇 ${station.name}';
+      case TransitStopType.bus:
+        return '🚌 ${station.name}';
+      case TransitStopType.platform:
+        return '🚉 ${station.name}';
+    }
+  }
+
+  double _calculateDistance(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+
+    final double lat1Rad = point1.latitude * math.pi / 180;
+    final double lat2Rad = point2.latitude * math.pi / 180;
+    final double deltaLatRad =
+        (point2.latitude - point1.latitude) * math.pi / 180;
+    final double deltaLngRad =
+        (point2.longitude - point1.longitude) * math.pi / 180;
+
+    final double a =
+        math.sin(deltaLatRad / 2) * math.sin(deltaLatRad / 2) +
+        math.cos(lat1Rad) *
+            math.cos(lat2Rad) *
+            math.sin(deltaLngRad / 2) *
+            math.sin(deltaLngRad / 2);
+    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c; // Distance in meters
   }
 
   Future<void> _searchLocation() async {
@@ -598,7 +812,7 @@ class _MapHomePageState extends State<MapHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final hasKey = Env.hasGoogleMapsKey;
+    final hasKey = true; // For now, assume we have Google Maps key
     final initialPos = _myLocation ?? _defaultCenter;
 
     return Scaffold(
@@ -625,7 +839,8 @@ class _MapHomePageState extends State<MapHomePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: () => Navigator.pushNamed(context, AppRoutes.chatbot),
+            onPressed: () =>
+                Navigator.pushNamed(context, routes.AppRoutes.chatbot),
             tooltip: 'Chat',
           ),
           IconButton(
@@ -1242,11 +1457,13 @@ class _ControlPanel extends StatelessWidget {
                           ),
                         )
                       : const Icon(Icons.directions, size: 18),
-                  label: Text(isRouting 
-                      ? 'Getting Route...' 
-                      : start != null 
-                          ? 'Get Route' 
-                          : 'Get Route from My Location'),
+                  label: Text(
+                    isRouting
+                        ? 'Getting Route...'
+                        : start != null
+                        ? 'Get Route'
+                        : 'Get Route from My Location',
+                  ),
                   style: FilledButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,

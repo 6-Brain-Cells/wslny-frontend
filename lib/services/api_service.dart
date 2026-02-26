@@ -78,10 +78,14 @@ class ApiService {
       return _handleResponse(response);
     } on http.ClientException catch (e) {
       debugPrint('❌ ClientException (likely CORS or network): $e');
-      throw Exception('Network error: Unable to connect to server. This might be a CORS issue or the server is not reachable. Details: $e');
+      throw Exception(
+        'Network error: Unable to connect to server. This might be a CORS issue or the server is not reachable. Details: $e',
+      );
     } on TimeoutException catch (e) {
       debugPrint('❌ TimeoutException: $e');
-      throw Exception('Request timeout: The server took too long to respond. Please try again.');
+      throw Exception(
+        'Request timeout: The server took too long to respond. Please try again.',
+      );
     } catch (e) {
       debugPrint('❌ POST request error: $e');
       throw Exception('POST request failed: $e');
@@ -137,6 +141,11 @@ class ApiService {
       if (response.body.isEmpty) return null;
       return json.decode(response.body);
     } else if (response.statusCode == 401) {
+      // Try to extract the actual error message from the response body
+      final errorMessage = _extractErrorMessage(response.body);
+      if (errorMessage != null && errorMessage.isNotEmpty) {
+        throw Exception(errorMessage);
+      }
       throw Exception('Unauthorized. Please log in again.');
     } else if (response.statusCode == 404) {
       throw Exception('API endpoint not found. Please check the backend URL.');

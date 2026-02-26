@@ -3,6 +3,7 @@ import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/models/route_models.dart';
 import 'package:wslny/services/route_service.dart';
+import 'package:wslny/services/chat_storage_service.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 class ChatbotPage extends StatefulWidget {
@@ -17,7 +18,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
   final RouteService _routeService = RouteService();
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
-  
+
   bool _speechEnabled = false;
   bool _isListening = false;
   bool _isProcessingRoute = false;
@@ -27,7 +28,28 @@ class _ChatbotPageState extends State<ChatbotPage> {
   void initState() {
     super.initState();
     _initSpeech();
-    _addBotMessage('Hi! I can help you find the best routes and nearby stations. You can ask me things like:\n\n• "من مصر الجديدة إلى وسط البلد"\n• "How to get from Zamalek to Maadi"\n• "Route from airport to downtown"\n\nWhat do you need today?');
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    final savedMessages = await ChatStorageService.loadChatMessages();
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _messages.addAll(savedMessages);
+      });
+
+      // Add welcome message if chat is empty
+      if (_messages.isEmpty) {
+        _addBotMessage(
+          'Hi! I can help you find the best routes and nearby stations. You can ask me things like:\n\n• "من مصر الجديدة إلى وسط البلد"\n• "How to get from Zamalek to Maadi"\n• "Route from airport to downtown"\n\nWhat do you need today?',
+        );
+      }
+    }
+  }
+
+  Future<void> _saveChatHistory() async {
+    await ChatStorageService.saveChatMessages(_messages);
   }
 
   @override
@@ -71,15 +93,41 @@ class _ChatbotPageState extends State<ChatbotPage> {
   }
 
   void _addBotMessage(String text) {
+    final message = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      text: text,
+      isUser: false,
+      timestamp: DateTime.now(),
+    );
     setState(() {
-      _messages.add(ChatMessage(text: text, isUser: false));
+      _messages.add(message);
     });
+    _saveChatHistory();
   }
 
   void _addUserMessage(String text) {
+    final message = ChatMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      text: text,
+      isUser: true,
+      timestamp: DateTime.now(),
+    );
     setState(() {
-      _messages.add(ChatMessage(text: text, isUser: true));
+      _messages.add(message);
     });
+    _saveChatHistory();
+  }
+
+  void _navigateToRouteResults(RouteResponse routeResponse) {
+    Navigator.pushNamed(
+      context,
+      AppRoutes.routeResults,
+      arguments: routeResponse,
+    );
+  }
+
+  void _cancelRoute() {
+    _addBotMessage('Route cancelled. Feel free to ask for a different route!');
   }
 
   Future<void> _sendMessage() async {
@@ -100,7 +148,9 @@ class _ChatbotPageState extends State<ChatbotPage> {
       _isProcessingRoute = true;
     });
 
-    _addBotMessage('Looking for the best route with ${filter.displayName} preference...');
+    _addBotMessage(
+      'Looking for the best route with ${filter.displayName} preference...',
+    );
 
     try {
       final routeResponse = await _routeService.getRouteByText(
@@ -108,18 +158,33 @@ class _ChatbotPageState extends State<ChatbotPage> {
         filter: filter,
       );
 
-      _addBotMessage('Great! I found a route for you. Tap below to see the details:');
-      
-      // Add route result message
+      // Show confirmation message with Yes/No buttons
+      _addBotMessage(
+        'I found a route from **${routeResponse.fromName ?? 'Start Location'}** to **${routeResponse.toName ?? 'Destination'}**:\n\n'
+        '🕐 Duration: ${routeResponse.route.totalDurationFormatted}\n'
+        '📍 Distance: ${routeResponse.route.totalDistanceMeters}m\n'
+        '💰 Fare: ${routeResponse.route.estimatedFareFormatted}\n'
+        '🚌 Segments: ${routeResponse.route.segments.length}\n\n'
+        'Is this the correct route?',
+      );
+
+      // Add confirmation message with Yes/No buttons
+      final confirmationMessage = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: 'Route Confirmation',
+        isUser: false,
+        timestamp: DateTime.now(),
+        routeResponse: routeResponse,
+        showConfirmation: true,
+      );
       setState(() {
-        _messages.add(ChatMessage(
-          text: 'Route Details',
-          isUser: false,
-          routeResponse: routeResponse,
-        ));
+        _messages.add(confirmationMessage);
       });
+      await _saveChatHistory();
     } catch (e) {
-      _addBotMessage('Sorry, I couldn\'t find a route for that request. Please try rephrasing your question or check if the locations are correct.');
+      _addBotMessage(
+        'Sorry, I couldn\'t find a route for that request. Please try rephrasing your question or check if the locations are correct.',
+      );
       debugPrint('Route request error: $e');
     } finally {
       setState(() {
@@ -218,16 +283,23 @@ class _ChatbotPageState extends State<ChatbotPage> {
                   final message = _messages[index];
                   return message.isUser
                       ? _UserBubble(text: message.text)
+                      : message.showConfirmation
+                      ? _ConfirmationBubble(
+                          routeResponse: message.routeResponse!,
+                          onYes: () =>
+                              _navigateToRouteResults(message.routeResponse!),
+                          onNo: () => _cancelRoute(),
+                        )
                       : message.routeResponse != null
-                          ? _RouteBubble(
-                              routeResponse: message.routeResponse!,
-                              onTap: () => Navigator.pushNamed(
-                                context,
-                                AppRoutes.routeResults,
-                                arguments: message.routeResponse,
-                              ),
-                            )
-                          : _BotBubble(text: message.text);
+                      ? _RouteBubble(
+                          routeResponse: message.routeResponse!,
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.routeResults,
+                            arguments: message.routeResponse,
+                          ),
+                        )
+                      : _BotBubble(text: message.text);
                 },
               ),
             ),
@@ -245,18 +317,6 @@ class _ChatbotPageState extends State<ChatbotPage> {
       ),
     );
   }
-}
-
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final RouteResponse? routeResponse;
-
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    this.routeResponse,
-  });
 }
 
 class _BotBubble extends StatelessWidget {
@@ -313,15 +373,14 @@ class _RouteBubble extends StatelessWidget {
   final RouteResponse routeResponse;
   final VoidCallback onTap;
 
-  const _RouteBubble({
-    required this.routeResponse,
-    required this.onTap,
-  });
+  const _RouteBubble({required this.routeResponse, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final route = routeResponse.route;
-    
+    final fromName = routeResponse.fromName ?? 'Origin';
+    final toName = routeResponse.toName ?? 'Destination';
+
     return Align(
       alignment: Alignment.centerLeft,
       child: GestureDetector(
@@ -343,7 +402,7 @@ class _RouteBubble extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '${routeResponse.fromName} → ${routeResponse.toName}',
+                      '$fromName → $toName',
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -395,10 +454,7 @@ class _RouteInfoItem extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _RouteInfoItem({
-    required this.icon,
-    required this.text,
-  });
+  const _RouteInfoItem({required this.icon, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -409,10 +465,7 @@ class _RouteInfoItem extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
         ),
       ],
     );
@@ -459,8 +512,8 @@ class _ChatInputBar extends StatelessWidget {
               controller: controller,
               enabled: !isProcessing,
               decoration: InputDecoration(
-                hintText: isProcessing 
-                    ? 'Processing your request...' 
+                hintText: isProcessing
+                    ? 'Processing your request...'
                     : 'Ask about routes or stations...',
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -540,6 +593,208 @@ class _ChatInputBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ConfirmationBubble extends StatefulWidget {
+  final RouteResponse routeResponse;
+  final VoidCallback onYes;
+  final VoidCallback onNo;
+
+  const _ConfirmationBubble({
+    required this.routeResponse,
+    required this.onYes,
+    required this.onNo,
+  });
+
+  @override
+  State<_ConfirmationBubble> createState() => _ConfirmationBubbleState();
+}
+
+class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
+  bool _isFavorite = false;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFavoriteStatus();
+  }
+
+  Future<void> _checkFavoriteStatus() async {
+    final isFavorite = await ChatStorageService.isRouteFavorite(
+      widget.routeResponse.requestId,
+    );
+    if (mounted) {
+      setState(() {
+        _isFavorite = isFavorite;
+      });
+    }
+  }
+
+  Future<void> _toggleFavorite() async {
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final routeName =
+          '${widget.routeResponse.fromName ?? "Start"} → ${widget.routeResponse.toName ?? "Destination"}';
+
+      if (_isFavorite) {
+        await ChatStorageService.removeFavoriteRoute(
+          widget.routeResponse.requestId,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Route removed from favorites')),
+          );
+        }
+      } else {
+        await ChatStorageService.saveFavoriteRoute(
+          widget.routeResponse,
+          routeName,
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Route added to favorites')),
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _isFavorite = !_isFavorite;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to update favorites')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final route = widget.routeResponse.route;
+    final fromName = widget.routeResponse.fromName ?? 'Origin';
+    final toName = widget.routeResponse.toName ?? 'Destination';
+
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.help_outline, color: AppColors.primary, size: 16),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Confirm Route',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: _isSaving ? null : _toggleFavorite,
+                  icon: _isSaving
+                      ? SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : Icon(
+                          _isFavorite ? Icons.favorite : Icons.favorite_border,
+                          color: _isFavorite ? Colors.red : AppColors.primary,
+                          size: 20,
+                        ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$fromName → $toName',
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                _RouteInfoItem(
+                  icon: Icons.access_time,
+                  text: route.totalDurationFormatted,
+                ),
+                const SizedBox(width: 12),
+                _RouteInfoItem(
+                  icon: Icons.attach_money,
+                  text: route.estimatedFareFormatted,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: widget.onNo,
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: AppColors.primary.withOpacity(0.5),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    child: Text(
+                      'No',
+                      style: TextStyle(color: AppColors.primary, fontSize: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: FilledButton(
+                    onPressed: widget.onYes,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    child: const Text(
+                      'Yes',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

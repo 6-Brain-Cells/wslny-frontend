@@ -53,6 +53,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           content: Text(
             'Please agree to the Terms of Service and Privacy Policy',
           ),
+          backgroundColor: Colors.orange,
         ),
       );
       return;
@@ -61,29 +62,57 @@ class _SignUpScreenState extends State<SignUpScreen> {
     if (_formKey.currentState?.validate() ?? false) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-      final success = await authProvider.signUpWithEmail(
-        firstName: _firstNameController.text.trim(),
-        lastName: _lastNameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        mobileNumber: _phoneController.text.trim().isNotEmpty
-            ? _phoneController.text.trim()
-            : null,
-        gender: _selectedGender,
-        address: _addressController.text.trim().isNotEmpty
-            ? _addressController.text.trim()
-            : null,
-      );
-
-      if (success && mounted) {
-        // Navigate to home screen (to be implemented later)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account created successfully!')),
+      try {
+        final success = await authProvider.signUpWithEmail(
+          firstName: _firstNameController.text.trim(),
+          lastName: _lastNameController.text.trim(),
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          mobileNumber: _phoneController.text.trim().isNotEmpty
+              ? _phoneController.text.trim()
+              : null,
+          gender: _selectedGender,
+          address: _addressController.text.trim().isNotEmpty
+              ? _addressController.text.trim()
+              : null,
         );
-      } else if (mounted && authProvider.error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
+
+        if (success && mounted) {
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Navigate to login screen after a short delay
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              Navigator.of(context).pushReplacementNamed('/login');
+            }
+          });
+        } else if (mounted && authProvider.error != null) {
+          // Show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(authProvider.error!),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Registration failed: ${e.toString()}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     }
   }

@@ -4,7 +4,7 @@ class AppConstants {
 
   // Development mode - set to true to use mock data when backend is not available
   // Set to true temporarily if experiencing CORS issues during web development
-  static const bool useMockMode = false;
+  static const bool useMockMode = false; // Use real backend API
 
   // Storage Keys
   static const String languageKey = 'selected_language';

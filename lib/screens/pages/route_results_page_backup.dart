@@ -238,6 +238,73 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
         ].reduce((a, b) => a > b ? a : b),
       ),
     );
+  }
+}
+
+setState(() {});
+
+Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) async {
+  try {
+    final overpassService = OverpassService();
+
+    // Define bounding box around the metro route
+    final southWest = LatLng(
+      math.min(segment.startLocation.lat, segment.endLocation.lat) - 0.01,
+      math.min(segment.startLocation.lon, segment.endLocation.lon) - 0.01,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    // Haversine formula for calculating distance between two points
+    const earthRadius = 6371000; // Earth's radius in meters
+
+    final dLat = _toRadians(lat2 - lat1);
+    final dLon = _toRadians(lon2 - lon1);
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_toRadians(lat1)) *
+            math.cos(_toRadians(lat2)) *
+            math.sin(dLon / 2) *
+            math.sin(dLon / 2);
+
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degrees) {
+    return degrees * (math.pi / 180);
+  }
+
+  void _fitAllSegments() {
+    if (widget.routeResponse.route.segments.isEmpty) return;
+
+    final segments = widget.routeResponse.route.segments;
+    final allPoints = segments
+        .expand(
+          (s) => [
+            LatLng(s.startLocation.lat, s.startLocation.lon),
+            LatLng(s.endLocation.lat, s.endLocation.lon),
+          ],
+        )
+        .toList();
+
+    if (allPoints.isEmpty) return;
+
+    final lats = allPoints.map((p) => p.latitude).toList();
+    final lngs = allPoints.map((p) => p.longitude).toList();
+
+    final bounds = LatLngBounds(
+      southwest: LatLng(
+        lats.reduce((a, b) => a < b ? a : b),
+        lngs.reduce((a, b) => a < b ? a : b),
+      ),
+      northeast: LatLng(
+        lats.reduce((a, b) => a > b ? a : b),
+        lngs.reduce((a, b) => a > b ? a : b),
+      ),
+    );
 
     _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
@@ -289,38 +356,6 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     } catch (e) {
       debugPrint('Error fetching metro stations: $e');
     }
-  }
-
-  void _fitAllSegments() {
-    if (widget.routeResponse.route.segments.isEmpty) return;
-
-    final segments = widget.routeResponse.route.segments;
-    final allPoints = segments
-        .expand(
-          (s) => [
-            LatLng(s.startLocation.lat, s.startLocation.lon),
-            LatLng(s.endLocation.lat, s.endLocation.lon),
-          ],
-        )
-        .toList();
-
-    if (allPoints.isEmpty) return;
-
-    final lats = allPoints.map((p) => p.latitude).toList();
-    final lngs = allPoints.map((p) => p.longitude).toList();
-
-    final bounds = LatLngBounds(
-      southwest: LatLng(
-        lats.reduce((a, b) => a < b ? a : b),
-        lngs.reduce((a, b) => a < b ? a : b),
-      ),
-      northeast: LatLng(
-        lats.reduce((a, b) => a > b ? a : b),
-        lngs.reduce((a, b) => a > b ? a : b),
-      ),
-    );
-
-    _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
   Future<void> _checkIfSaved() async {
@@ -390,26 +425,6 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
           ),
         );
       }
-    }
-  }
-
-  String _getSegmentTitle(RouteSegment segment, int index) {
-    final method = segment.method.toLowerCase();
-    final start = segment.startLocation.name ?? 'Point ${index + 1}';
-    final end = segment.endLocation.name ?? 'Point ${index + 2}';
-
-    switch (method) {
-      case 'walk':
-        return 'Walk from $start to $end';
-      case 'bus':
-        return 'Bus from $start to $end';
-      case 'microbus':
-        return 'Microbus from $start to $end';
-      case 'metro':
-      case 'subway':
-        return 'Metro from $start to $end';
-      default:
-        return '$method from $start to $end';
     }
   }
 
@@ -489,8 +504,6 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
 
           // Map
           Expanded(
@@ -620,9 +633,31 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
               ),
             ),
           ),
+
+          const SizedBox(height: 16),
         ],
       ),
     );
+  }
+
+  String _getSegmentTitle(RouteSegment segment, int index) {
+    final method = segment.method.toLowerCase();
+    final start = segment.startLocation.name ?? 'Point ${index + 1}';
+    final end = segment.endLocation.name ?? 'Point ${index + 2}';
+
+    switch (method) {
+      case 'walk':
+        return 'Walk to $end';
+      case 'bus':
+        return 'Take bus from $start';
+      case 'microbus':
+        return 'Take microbus from $start';
+      case 'metro':
+      case 'subway':
+        return 'Take metro from $start';
+      default:
+        return 'Travel from $start to $end';
+    }
   }
 }
 
@@ -632,7 +667,6 @@ class _SummaryItem extends StatelessWidget {
   final String value;
 
   const _SummaryItem({
-    super.key,
     required this.icon,
     required this.label,
     required this.value,
@@ -642,20 +676,19 @@ class _SummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 20, color: Colors.grey.shade600),
+        Icon(icon, color: AppColors.primary, size: 20),
         const SizedBox(height: 4),
         Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade600,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        Text(
+          label,
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
         ),
       ],
     );
