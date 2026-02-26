@@ -148,6 +148,11 @@ class ApiService {
       }
       throw Exception('Unauthorized. Please log in again.');
     } else if (response.statusCode == 404) {
+      // Route API and others may return 404 with a structured error (e.g. ROUTING_NO_PATH)
+      final errorMessage = _extractErrorMessage(response.body);
+      if (errorMessage != null && errorMessage.isNotEmpty) {
+        throw Exception(errorMessage);
+      }
       throw Exception('API endpoint not found. Please check the backend URL.');
     } else if (response.statusCode >= 500) {
       throw Exception('Server error. Please try again later.');
@@ -169,6 +174,13 @@ class ApiService {
         final errors = data['errors'] as List;
         // Return the first error message or join all errors
         return errors.map((e) => e.toString()).join(', ');
+      }
+
+      // Handle route API and similar: { "error": { "code": "...", "message": "..." } }
+      if (data['error'] is Map<String, dynamic>) {
+        final err = data['error'] as Map<String, dynamic>;
+        final msg = err['message'];
+        if (msg is String && msg.isNotEmpty) return msg;
       }
 
       // Handle single error message

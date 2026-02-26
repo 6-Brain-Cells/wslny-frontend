@@ -22,6 +22,8 @@ const Color _startColor = Color(0xFF43A047);
 /// Red for end (matches map pin)
 const Color _endColor = Color(0xFFE53935);
 
+const double _kCollapsedPanelHeight = 48;
+
 class MapHomePage extends StatefulWidget {
   const MapHomePage({super.key});
 
@@ -60,8 +62,10 @@ class _MapHomePageState extends State<MapHomePage> {
   bool _isSearching = false;
   String? _startAddress;
   String? _endAddress;
+  bool _panelExpanded = true;
 
   static const LatLng _defaultCenter = LatLng(30.0444, 31.2357); // Cairo
+  static const double _kExpandedPanelBarrierHeight = 420;
 
   @override
   void initState() {
@@ -859,11 +863,7 @@ class _MapHomePageState extends State<MapHomePage> {
       body: hasKey
           ? Stack(
               children: [
-                GestureDetector(
-                  onTapUp: (details) {
-                    // Only handle tap when not on overlay; map tap is via onTap on GoogleMap
-                  },
-                  child: GoogleMap(
+                GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: initialPos,
                       zoom: 14,
@@ -883,6 +883,18 @@ class _MapHomePageState extends State<MapHomePage> {
                     mapType: MapType.normal,
                     zoomControlsEnabled: false,
                   ),
+                // Touch barrier: absorbs all taps in the panel region so the map never receives them
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: _panelExpanded
+                      ? _kExpandedPanelBarrierHeight
+                      : _kCollapsedPanelHeight,
+                  child: Listener(
+                    behavior: HitTestBehavior.opaque,
+                    onPointerDown: (_) {},
+                  ),
                 ),
                 Positioned(
                   top: 8,
@@ -896,7 +908,7 @@ class _MapHomePageState extends State<MapHomePage> {
                 ),
                 Positioned(
                   right: 16,
-                  bottom: 220,
+                  bottom: _panelExpanded ? 220 : (_kCollapsedPanelHeight + 16),
                   child: Column(
                     children: [
                       FloatingActionButton.small(
@@ -911,26 +923,44 @@ class _MapHomePageState extends State<MapHomePage> {
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  child: _ControlPanel(
-                    pickMode: _pickMode,
-                    onPickModeChanged: (m) => setState(() => _pickMode = m),
-                    myLocation: _myLocation,
-                    start: _start,
-                    end: _end,
-                    startAddress: _startAddress,
-                    endAddress: _endAddress,
-                    locationError: _locationError,
-                    isRouting: _isRouting,
-                    routeError: _routeError,
-                    routeDistanceKm: _routeDistanceKm,
-                    showTransit: _showTransit,
-                    isLoadingTransit: _isLoadingTransit,
-                    transitError: _transitError,
-                    onMeToStart: _meToStart,
-                    onMeToEnd: _meToEnd,
-                    onShowTransit: _toggleTransit,
-                    onClear: _clearPoints,
-                    onRequestRoute: _requestRoute,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: AnimatedSize(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.bottomCenter,
+                        child: _panelExpanded
+                            ? _ExpandedPanel(
+                                onCollapse: () =>
+                                    setState(() => _panelExpanded = false),
+                                child: _ControlPanel(
+                                  pickMode: _pickMode,
+                                  onPickModeChanged: (m) =>
+                                      setState(() => _pickMode = m),
+                                  myLocation: _myLocation,
+                                  start: _start,
+                                  end: _end,
+                                  startAddress: _startAddress,
+                                  endAddress: _endAddress,
+                                  locationError: _locationError,
+                                  isRouting: _isRouting,
+                                  routeError: _routeError,
+                                  routeDistanceKm: _routeDistanceKm,
+                                  showTransit: _showTransit,
+                                  isLoadingTransit: _isLoadingTransit,
+                                  transitError: _transitError,
+                                  onMeToStart: _meToStart,
+                                  onMeToEnd: _meToEnd,
+                                  onShowTransit: _toggleTransit,
+                                  onClear: _clearPoints,
+                                  onRequestRoute: _requestRoute,
+                                ),
+                              )
+                            : _CollapsedPanelBar(
+                                onExpand: () =>
+                                    setState(() => _panelExpanded = true),
+                              ),
+                      ),
                   ),
                 ),
               ],
@@ -1279,6 +1309,98 @@ class _SearchResultsSheet extends StatelessWidget {
       default:
         return 'Place';
     }
+  }
+}
+
+/// Wraps the expanded control panel with a collapse handle; absorbs touch.
+class _ExpandedPanel extends StatelessWidget {
+  final VoidCallback onCollapse;
+  final Widget child;
+
+  const _ExpandedPanel({
+    required this.onCollapse,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onCollapse,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 28,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Collapse',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+/// Collapsed bar at bottom; tap to expand. Absorbs touch.
+class _CollapsedPanelBar extends StatelessWidget {
+  final VoidCallback onExpand;
+
+  const _CollapsedPanelBar({required this.onExpand});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _kCollapsedPanelHeight,
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Material(
+        color: Theme.of(context).cardColor,
+        elevation: 2,
+        child: InkWell(
+          onTap: onExpand,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Icon(Icons.tune_rounded, color: AppColors.primary, size: 22),
+                const SizedBox(width: 10),
+                Text(
+                  'Route controls',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.keyboard_arrow_up,
+                  size: 28,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
