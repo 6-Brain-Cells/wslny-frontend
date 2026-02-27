@@ -35,10 +35,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <!-- Google Maps API key: replace with your key (same as in .env GOOGLE_MAPS_API_KEY) -->
+        <!-- Google Maps API key for Android (must match the key in .env) -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="YOUR_GOOGLE_MAPS_API_KEY_HERE" />
+            android:value="AIzaSyAOM3xzuBoQyjcsI9XlOVdnwdNUMLiF2wg" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

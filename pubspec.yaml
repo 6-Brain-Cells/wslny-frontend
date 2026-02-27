@@ -60,7 +60,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   
   # Speech to text
-  speech_to_text: ^6.6.0
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:
