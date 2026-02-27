@@ -4,101 +4,103 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../config/env.dart';
 import '../models/transit_stop.dart';
 
+/// Fetches nearby transit stops using the Google Places Nearby Search API.
+/// Despite the class name being kept for compatibility, the implementation
+/// now uses Google Places for accurate, well-named results.
 class OverpassService {
-  static const int timeoutSeconds = 15;
+  static const int _timeoutSeconds = 10;
+  static const double _radiusMeters = 1500;
 
-  /// Fetch transit stops (bus, metro, platform) in a bounding box.
-  /// Uses a smaller area to avoid 504 timeouts from Overpass.
-  Future<OverpassResult> getTransitStops(
-    LatLng southWest,
-    LatLng northEast,
-  ) async {
-    final base = Env.overpassBaseUrl;
-    // Shrink bbox slightly to reduce load and avoid 504
-    final pad = 0.002;
-    final bbox =
-        '${southWest.latitude + pad},${southWest.longitude + pad},${northEast.latitude - pad},${northEast.longitude - pad}';
+  /// Fetch transit stops near [center] using Google Places Nearby Search.
+  /// Queries three place types and merges the results, deduplicating by place_id.
+  Future<OverpassResult> getTransitStops(LatLng center) async {
+    final key = Env.googleMapsApiKey;
+    if (key.isEmpty) {
+      return OverpassResult.error('Google Maps API key is not configured.');
+    }
 
-    final query = '''
-[out:json][timeout:$timeoutSeconds];
-(
-  node["highway"="bus_stop"]($bbox);
-  node["railway"="station"]($bbox);
-  node["railway"="halt"]($bbox);
-  node["public_transport"="platform"]($bbox);
-  node["public_transport"="station"]($bbox);
-);
-out body;
-''';
+    // Types to search: subway/metro, train/tram stations, bus stops.
+    const types = ['subway_station', 'transit_station', 'bus_station'];
 
-    const maxAttempts = 2;
-    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+    final seen = <String>{};
+    final stops = <TransitStop>[];
+    String? lastError;
+
+    for (final type in types) {
       try {
-        final response = await http.post(
-          Uri.parse(base),
-          body: {'data': query},
-          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-        ).timeout(Duration(seconds: timeoutSeconds + 10));
+        final uri = Uri.https(
+          'maps.googleapis.com',
+          '/maps/api/place/nearbysearch/json',
+          {
+            'location': '${center.latitude},${center.longitude}',
+            'radius': _radiusMeters.toStringAsFixed(0),
+            'type': type,
+            'key': key,
+            'language': 'en',
+          },
+        );
 
-        if (response.statusCode == 504 || response.statusCode == 502) {
-          if (attempt < maxAttempts) continue;
-          return OverpassResult.error(
-            'Transit service is busy. Please try again in a moment.',
-          );
-        }
+        final response = await http
+            .get(uri)
+            .timeout(const Duration(seconds: _timeoutSeconds));
 
         if (response.statusCode != 200) {
-          return OverpassResult.error(
-            'Transit request failed. Please try again.',
-          );
+          lastError = 'Places request failed (${response.statusCode})';
+          continue;
         }
 
         final data = json.decode(response.body) as Map<String, dynamic>;
-        final elements = data['elements'] as List<dynamic>? ?? [];
-        final stops = <TransitStop>[];
+        final status = data['status'] as String? ?? '';
 
-        for (final e in elements) {
-          final map = e as Map<String, dynamic>;
-          final lat = (map['lat'] as num?)?.toDouble();
-          final lon = (map['lon'] as num?)?.toDouble();
-          if (lat == null || lon == null) continue;
+        if (status == 'REQUEST_DENIED' || status == 'INVALID_REQUEST') {
+          return OverpassResult.error(
+            'Google Places API error: $status. '
+            '${data['error_message'] ?? ""}',
+          );
+        }
 
-          final id = map['id']?.toString() ?? '${lat}_$lon';
-          final tags = map['tags'] as Map<String, dynamic>? ?? {};
-          final name = (tags['name'] ?? tags['ref'] ?? 'Transit stop').toString();
+        if (status == 'ZERO_RESULTS') continue;
 
-          TransitStopType type = TransitStopType.platform;
-          if (tags['railway'] == 'station' || tags['railway'] == 'halt') {
-            type = TransitStopType.metro;
-          } else if (tags['highway'] == 'bus_stop' ||
-              tags['public_transport'] == 'platform') {
-            type = tags['railway'] != null
-                ? TransitStopType.metro
-                : TransitStopType.bus;
+        final results = data['results'] as List<dynamic>? ?? [];
+        for (final r in results) {
+          final map = r as Map<String, dynamic>;
+          final placeId = map['place_id'] as String? ?? '';
+          if (placeId.isEmpty || seen.contains(placeId)) continue;
+          seen.add(placeId);
+
+          final loc = (map['geometry'] as Map?)!['location'] as Map;
+          final lat = (loc['lat'] as num).toDouble();
+          final lng = (loc['lng'] as num).toDouble();
+          final name = (map['name'] as String?) ?? 'Transit stop';
+          final placeTypes = List<String>.from(map['types'] as List? ?? []);
+
+          TransitStopType stopType;
+          if (placeTypes.contains('subway_station')) {
+            stopType = TransitStopType.metro;
+          } else if (placeTypes.contains('bus_station')) {
+            stopType = TransitStopType.bus;
+          } else {
+            stopType = TransitStopType.platform;
           }
 
           stops.add(TransitStop(
-            id: id,
-            position: LatLng(lat, lon),
+            id: placeId,
+            position: LatLng(lat, lng),
             name: name,
-            type: type,
+            type: stopType,
           ));
         }
-
-        return OverpassResult.success(stops);
       } on Exception catch (e) {
-        if (attempt >= maxAttempts) {
-          return OverpassResult.error(
-            e.toString().contains('timeout') || e.toString().contains('504')
-                ? 'Transit service is busy. Please try again in a moment.'
-                : 'Could not load transit stops. Please try again.',
-          );
-        }
+        lastError = e.toString().contains('timeout')
+            ? 'Transit lookup timed out. Please try again.'
+            : 'Could not load transit stops: $e';
       }
     }
-    return OverpassResult.error(
-      'Could not load transit stops. Please try again.',
-    );
+
+    if (stops.isEmpty && lastError != null) {
+      return OverpassResult.error(lastError!);
+    }
+    return OverpassResult.success(stops);
   }
 }
 
@@ -108,13 +110,11 @@ class OverpassResult {
 
   OverpassResult._({this.stops = const [], this.error});
 
-  factory OverpassResult.success(List<TransitStop> stops) {
-    return OverpassResult._(stops: stops);
-  }
+  factory OverpassResult.success(List<TransitStop> stops) =>
+      OverpassResult._(stops: stops);
 
-  factory OverpassResult.error(String message) {
-    return OverpassResult._(error: message);
-  }
+  factory OverpassResult.error(String message) =>
+      OverpassResult._(error: message);
 
   bool get isSuccess => error == null;
 }

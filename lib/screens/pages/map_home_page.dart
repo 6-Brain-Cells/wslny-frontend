@@ -54,6 +54,7 @@ class _MapHomePageState extends State<MapHomePage> {
   bool _showTransit = false;
   bool _isLoadingTransit = false;
   String? _transitError;
+  List<TransitStop> _transitStops = [];
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _searchingLocation = false;
@@ -161,8 +162,26 @@ class _MapHomePageState extends State<MapHomePage> {
   }
 
   void _addTransitMarkers(Set<Marker> markers) {
-    // This will be populated when we fetch transit data
-    // For now, we'll add the transit markers in the _toggleTransit method
+    final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
+    for (int i = 0; i < _transitStops.length; i++) {
+      final station = _transitStops[i];
+      final distance = _calculateDistance(center, station.position);
+      if (distance > 2000) continue;
+      final markerColor = station.type == TransitStopType.metro
+          ? BitmapDescriptor.hueViolet
+          : station.type == TransitStopType.bus
+              ? BitmapDescriptor.hueOrange
+              : BitmapDescriptor.hueBlue;
+      markers.add(Marker(
+        markerId: MarkerId('transit_${station.type.name}_$i'),
+        position: station.position,
+        icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
+        infoWindow: InfoWindow(
+          title: _getTransitStationTitle(station),
+          snippet: '${(distance / 1000).toStringAsFixed(2)} km away',
+        ),
+      ));
+    }
   }
 
   void _updatePolyline() {
@@ -581,24 +600,23 @@ class _MapHomePageState extends State<MapHomePage> {
       setState(() {
         _showTransit = false;
         _transitError = null;
+        _transitStops = [];
       });
       _updateMarkers();
       return;
     }
 
     final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-    const delta = 0.008; // ~1km radius to avoid Overpass 504 timeouts
-    final sw = LatLng(center.latitude - delta, center.longitude - delta);
-    final ne = LatLng(center.latitude + delta, center.longitude + delta);
 
     setState(() {
       _showTransit = true;
       _isLoadingTransit = true;
       _transitError = null;
+      _transitStops = [];
     });
 
     try {
-      final result = await _overpassService.getTransitStops(sw, ne);
+      final result = await _overpassService.getTransitStops(center);
 
       if (!mounted) return;
 
@@ -606,10 +624,10 @@ class _MapHomePageState extends State<MapHomePage> {
         _isLoadingTransit = false;
         if (result.isSuccess) {
           _transitError = null;
-          // Add transit markers directly here
-          _addTransitStationsToMap(result.stops, center);
+          _transitStops = result.stops;
         } else {
           _transitError = result.error;
+          _transitStops = [];
         }
       });
     } catch (e) {
@@ -617,47 +635,12 @@ class _MapHomePageState extends State<MapHomePage> {
         setState(() {
           _isLoadingTransit = false;
           _transitError = 'Failed to load transit stations: $e';
+          _transitStops = [];
         });
       }
     }
 
-    _updateMarkers();
-  }
-
-  void _addTransitStationsToMap(List<TransitStop> stations, LatLng center) {
-    // Sort stations by distance from center
-    stations.sort((a, b) {
-      final distanceA = _calculateDistance(center, a.position);
-      final distanceB = _calculateDistance(center, b.position);
-      return distanceA.compareTo(distanceB);
-    });
-
-    // Add markers for each station
-    for (int i = 0; i < stations.length; i++) {
-      final station = stations[i];
-      final distance = _calculateDistance(center, station.position);
-
-      // Only show stations within 2km
-      if (distance > 2000) continue;
-
-      final markerColor = station.type == TransitStopType.metro
-          ? BitmapDescriptor.hueViolet
-          : station.type == TransitStopType.bus
-          ? BitmapDescriptor.hueOrange
-          : BitmapDescriptor.hueBlue;
-
-      _markers.add(
-        Marker(
-          markerId: MarkerId('transit_${station.type.name}_$i'),
-          position: station.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
-          infoWindow: InfoWindow(
-            title: _getTransitStationTitle(station),
-            snippet: '${(distance / 1000).toStringAsFixed(1)} km away',
-          ),
-        ),
-      );
-    }
+    if (mounted) _updateMarkers();
   }
 
   String _getTransitStationTitle(TransitStop station) {
@@ -863,6 +846,7 @@ class _MapHomePageState extends State<MapHomePage> {
       body: hasKey
           ? Stack(
               children: [
+                // ── Map (no onTap — we intercept taps in Flutter instead) ──
                 GoogleMap(
                     initialCameraPosition: CameraPosition(
                       target: initialPos,
@@ -875,7 +859,6 @@ class _MapHomePageState extends State<MapHomePage> {
                       }
                       _updateMarkers();
                     },
-                    onTap: _onMapTap,
                     myLocationEnabled: true,
                     myLocationButtonEnabled: false,
                     markers: _markers,
@@ -883,17 +866,30 @@ class _MapHomePageState extends State<MapHomePage> {
                     mapType: MapType.normal,
                     zoomControlsEnabled: false,
                   ),
-                // Touch barrier: absorbs all taps in the panel region so the map never receives them
+                // ── Flutter tap interceptor covering only the map area ──
+                // Sits on top of the native map view but stops exactly at
+                // the panel's top edge, so panel taps never reach this layer.
                 Positioned(
+                  top: 0,
                   left: 0,
                   right: 0,
-                  bottom: 0,
-                  height: _panelExpanded
+                  bottom: _panelExpanded
                       ? _kExpandedPanelBarrierHeight
                       : _kCollapsedPanelHeight,
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (_) {},
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onTapUp: (details) async {
+                      if (_mapController == null) return;
+                      final pos = details.localPosition;
+                      final sc = ScreenCoordinate(
+                        x: pos.dx.round(),
+                        y: pos.dy.round(),
+                      );
+                      try {
+                        final latLng = await _mapController!.getLatLng(sc);
+                        _onMapTap(latLng);
+                      } catch (_) {}
+                    },
                   ),
                 ),
                 Positioned(

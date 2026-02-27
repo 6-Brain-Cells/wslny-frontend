@@ -246,18 +246,13 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     try {
       final overpassService = OverpassService();
       
-      // Define bounding box around the metro route
-      final southWest = LatLng(
-        math.min(segment.startLocation.lat, segment.endLocation.lat) - 0.01,
-        math.min(segment.startLocation.lon, segment.endLocation.lon) - 0.01,
-      );
-      final northEast = LatLng(
-        math.max(segment.startLocation.lat, segment.endLocation.lat) + 0.01,
-        math.max(segment.startLocation.lon, segment.endLocation.lon) + 0.01,
-      );
+      // Calculate center point of the route segment for transit search
+      final centerLat = (segment.startLocation.lat + segment.endLocation.lat) / 2;
+      final centerLon = (segment.startLocation.lon + segment.endLocation.lon) / 2;
+      final center = LatLng(centerLat, centerLon);
       
-      // Fetch transit stops in the area
-      final result = await overpassService.getTransitStops(southWest, northEast);
+      // Fetch transit stops around the segment center
+      final result = await overpassService.getTransitStops(center);
       
       if (!result.isSuccess) {
         debugPrint('Error fetching transit stops: ${result.error}');
