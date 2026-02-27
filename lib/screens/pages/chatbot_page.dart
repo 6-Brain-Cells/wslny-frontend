@@ -160,7 +160,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
       // Show confirmation message with Yes/No buttons
       _addBotMessage(
-        'I found a route from **${routeResponse.fromName ?? 'Start Location'}** to **${routeResponse.toName ?? 'Destination'}**:\n\n'
+        'I found a route from "${routeResponse.fromName ?? 'Start Location'}" "" to "${routeResponse.toName ?? 'Destination'}":\n\n'
         '🕐 Duration: ${routeResponse.route.totalDurationFormatted}\n'
         '📍 Distance: ${routeResponse.route.totalDistanceMeters}m\n'
         '💰 Fare: ${routeResponse.route.estimatedFareFormatted}\n'
