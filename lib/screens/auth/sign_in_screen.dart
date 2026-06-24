@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../config/app_colors.dart';
 import '../../config/routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
@@ -95,46 +95,65 @@ class _SignInScreenState extends State<SignInScreen> {
   void _handleGoogleSignIn() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.signInWithGoogle();
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return;
 
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Google sign in successful!'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final success = await authProvider.signInWithGoogle(
+        idToken: googleAuth.idToken,
       );
-      Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
-    } else if (mounted && authProvider.error != null) {
-      String errorMessage = authProvider.error!;
 
-      // Improve error messages for better UX
-      if (errorMessage.contains('Network error')) {
-        errorMessage =
-            'Network connection error. Please check your internet connection and try again.';
-      } else if (errorMessage.contains('timeout')) {
-        errorMessage = 'Request timed out. Please try again.';
-      } else if (errorMessage.contains('Google sign-in')) {
-        errorMessage = 'Google sign-in failed. Please try again.';
-      }
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Google sign in successful!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        Navigator.pushReplacementNamed(context, AppRoutes.mainLayout);
+      } else if (mounted && authProvider.error != null) {
+        String errorMessage = authProvider.error!;
 
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Dismiss',
-            textColor: Colors.white,
-            onPressed: () {
-              messenger.hideCurrentSnackBar();
-            },
+        if (errorMessage.contains('Network error')) {
+          errorMessage =
+              'Network connection error. Please check your internet connection and try again.';
+        } else if (errorMessage.contains('timeout')) {
+          errorMessage = 'Request timed out. Please try again.';
+        } else if (errorMessage.contains('Google sign-in')) {
+          errorMessage = 'Google sign-in failed. Please try again.';
+        }
+
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                messenger.hideCurrentSnackBar();
+              },
           ),
         ),
       );
+    }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-in failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -169,7 +188,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
@@ -177,12 +196,12 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Wslny',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -322,7 +341,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     SocialAuthButton(
                       text: l10n.continueWithGoogle,
                       icon: Icons.g_mobiledata,
-                      iconColor: AppColors.google,
+                      iconColor: const Color(0xFFDB4437),
                       onPressed: _handleGoogleSignIn,
                     ),
 

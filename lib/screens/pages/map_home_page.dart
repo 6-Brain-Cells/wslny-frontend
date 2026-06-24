@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import '../../config/app_colors.dart';
 import '../../models/route_models.dart';
 import '../../models/transit_stop.dart';
 import '../../services/route_service.dart';
@@ -151,7 +150,10 @@ class _MapHomePageState extends State<MapHomePage> {
 
     // Transit markers (metro and bus stations)
     if (_showTransit && _transitError == null) {
-      _addTransitMarkers(m);
+      _addTransitStationsToMap(
+        _transitStops,
+        _myLocation ?? _start ?? _end ?? _defaultCenter,
+      );
     }
 
     setState(
@@ -161,26 +163,43 @@ class _MapHomePageState extends State<MapHomePage> {
     );
   }
 
-  void _addTransitMarkers(Set<Marker> markers) {
-    final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-    for (int i = 0; i < _transitStops.length; i++) {
-      final station = _transitStops[i];
+  void _addTransitStationsToMap(List<TransitStop> stations, LatLng center) {
+    // Sort stations by distance from center
+    stations.sort((a, b) {
+      final distanceA = _calculateDistance(center, a.position);
+      final distanceB = _calculateDistance(center, b.position);
+      return distanceA.compareTo(distanceB);
+    });
+
+    // Add markers for each station - LIMIT to reduce GPU load
+    int markerCount = 0;
+    const maxMarkers = 15; // Increased from 10 to show more stations
+
+    for (int i = 0; i < stations.length && markerCount < maxMarkers; i++) {
+      final station = stations[i];
       final distance = _calculateDistance(center, station.position);
-      if (distance > 2000) continue;
+
+      // Only show stations within 3km (increased from 1.5km)
+      if (distance > 3000) continue;
+
       final markerColor = station.type == TransitStopType.metro
           ? BitmapDescriptor.hueViolet
           : station.type == TransitStopType.bus
-              ? BitmapDescriptor.hueOrange
-              : BitmapDescriptor.hueBlue;
-      markers.add(Marker(
-        markerId: MarkerId('transit_${station.type.name}_$i'),
-        position: station.position,
-        icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
-        infoWindow: InfoWindow(
-          title: _getTransitStationTitle(station),
-          snippet: '${(distance / 1000).toStringAsFixed(2)} km away',
+          ? BitmapDescriptor.hueOrange
+          : BitmapDescriptor.hueBlue;
+
+      _markers.add(
+        Marker(
+          markerId: MarkerId('transit_${station.type.name}_$i'),
+          position: station.position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
+          infoWindow: InfoWindow(
+            title: _getTransitStationTitle(station),
+            snippet: '${(distance / 1000).toStringAsFixed(1)} km away',
+          ),
         ),
-      ));
+      );
+      markerCount++;
     }
   }
 
@@ -214,7 +233,12 @@ class _MapHomePageState extends State<MapHomePage> {
             },
           );
 
-      final response = await http.get(uri).timeout(const Duration(seconds: 5));
+      final response = await http
+          .get(
+            uri,
+            headers: {'User-Agent': 'WslnyApp/1.0 (Flutter Transit App)'},
+          )
+          .timeout(const Duration(seconds: 5));
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>?;
         if (data != null && data['display_name'] != null) {
@@ -267,27 +291,30 @@ class _MapHomePageState extends State<MapHomePage> {
       debugPrint('  - From: ${routeResponse.fromName}');
       debugPrint('  - To: ${routeResponse.toName}');
       debugPrint(
-        '  - Total Duration: ${routeResponse.route.totalDurationFormatted}',
+        '  - Total Duration: ${routeResponse.route?.totalDurationFormatted ?? 'N/A'}',
       );
       debugPrint(
-        '  - Total Distance: ${routeResponse.route.totalDistanceMeters}m',
+        '  - Total Distance: ${routeResponse.route?.totalDistanceMeters ?? 0}m',
       );
       debugPrint(
-        '  - Estimated Fare: ${routeResponse.route.estimatedFareFormatted}',
+        '  - Estimated Fare: ${routeResponse.route?.estimatedFareFormatted ?? 'N/A'}',
       );
       debugPrint(
-        '  - Number of Segments: ${routeResponse.route.segments.length}',
+        '  - Number of Segments: ${routeResponse.route?.segments.length ?? 0}',
       );
 
       // Print segment details
-      for (int i = 0; i < routeResponse.route.segments.length; i++) {
-        final segment = routeResponse.route.segments[i];
-        debugPrint('  - Segment $i: ${segment.method}');
-        debugPrint('    * From: ${segment.startLocation.name}');
-        debugPrint('    * To: ${segment.endLocation.name}');
-        debugPrint('    * Duration: ${segment.durationSeconds}s');
-        debugPrint('    * Distance: ${segment.distanceMeters}m');
-        debugPrint('    * Stops: ${segment.numStops}');
+      final route = routeResponse.route;
+      if (route != null) {
+        for (int i = 0; i < route.segments.length; i++) {
+          final segment = route.segments[i];
+          debugPrint('  - Segment $i: ${segment.method}');
+          debugPrint('    * From: ${segment.startLocation.name}');
+          debugPrint('    * To: ${segment.endLocation.name}');
+          debugPrint('    * Duration: ${segment.durationSeconds}s');
+          debugPrint('    * Distance: ${segment.distanceMeters}m');
+          debugPrint('    * Stops: ${segment.numStops}');
+        }
       }
 
       if (!mounted) return;
@@ -295,27 +322,40 @@ class _MapHomePageState extends State<MapHomePage> {
       // Now use OSRM for each segment to get realistic paths
       final List<LatLng> allRoutePoints = [];
 
-      for (int i = 0; i < routeResponse.route.segments.length; i++) {
-        final segment = routeResponse.route.segments[i];
+      final route2 = routeResponse.route;
+      if (route2 != null) {
+        for (int i = 0; i < route2.segments.length; i++) {
+          final segment = route2.segments[i];
 
-        try {
-          final osrmResult = await _osrmService.getRoute(
-            LatLng(segment.startLocation.lat, segment.startLocation.lon),
-            LatLng(segment.endLocation.lat, segment.endLocation.lon),
-          );
-
-          if (osrmResult.isSuccess && osrmResult.points.isNotEmpty) {
-            // Add OSRM points for this segment
-            if (i > 0) {
-              // Remove duplicate point between segments
-              allRoutePoints.addAll(osrmResult.points.skip(1));
-            } else {
-              allRoutePoints.addAll(osrmResult.points);
-            }
-            debugPrint(
-              '✅ Segment $i: Got ${osrmResult.points.length} OSRM points',
+          try {
+            final osrmResult = await _osrmService.getRoute(
+              LatLng(segment.startLocation.lat, segment.startLocation.lon),
+              LatLng(segment.endLocation.lat, segment.endLocation.lon),
             );
-          } else {
+
+            if (osrmResult.isSuccess && osrmResult.points.isNotEmpty) {
+              // Add OSRM points for this segment
+              if (i > 0) {
+                // Remove duplicate point between segments
+                allRoutePoints.addAll(osrmResult.points.skip(1));
+              } else {
+                allRoutePoints.addAll(osrmResult.points);
+              }
+              debugPrint(
+                '✅ Segment $i: Got ${osrmResult.points.length} OSRM points',
+              );
+            } else {
+              // Fallback to straight line
+              allRoutePoints.add(
+                LatLng(segment.startLocation.lat, segment.startLocation.lon),
+              );
+              allRoutePoints.add(
+                LatLng(segment.endLocation.lat, segment.endLocation.lon),
+              );
+              debugPrint('❌ Segment $i: OSRM failed, using straight line');
+            }
+          } catch (e) {
+            debugPrint('❌ Segment $i OSRM error: $e');
             // Fallback to straight line
             allRoutePoints.add(
               LatLng(segment.startLocation.lat, segment.startLocation.lon),
@@ -323,24 +363,14 @@ class _MapHomePageState extends State<MapHomePage> {
             allRoutePoints.add(
               LatLng(segment.endLocation.lat, segment.endLocation.lon),
             );
-            debugPrint('❌ Segment $i: OSRM failed, using straight line');
           }
-        } catch (e) {
-          debugPrint('❌ Segment $i OSRM error: $e');
-          // Fallback to straight line
-          allRoutePoints.add(
-            LatLng(segment.startLocation.lat, segment.startLocation.lon),
-          );
-          allRoutePoints.add(
-            LatLng(segment.endLocation.lat, segment.endLocation.lon),
-          );
         }
       }
 
       setState(() {
         _isRouting = false;
         _routePoints = allRoutePoints;
-        _routeDistanceKm = routeResponse.route.totalDistanceMeters / 1000.0;
+        _routeDistanceKm = (routeResponse.route?.totalDistanceMeters ?? 0) / 1000.0;
         _routeError = null;
         _updatePolyline();
         _fitRouteBounds();
@@ -502,27 +532,30 @@ class _MapHomePageState extends State<MapHomePage> {
       debugPrint('  - From: ${routeResponse.fromName}');
       debugPrint('  - To: ${routeResponse.toName}');
       debugPrint(
-        '  - Total Duration: ${routeResponse.route.totalDurationFormatted}',
+        '  - Total Duration: ${routeResponse.route?.totalDurationFormatted ?? 'N/A'}',
       );
       debugPrint(
-        '  - Total Distance: ${routeResponse.route.totalDistanceMeters}m',
+        '  - Total Distance: ${routeResponse.route?.totalDistanceMeters ?? 0}m',
       );
       debugPrint(
-        '  - Estimated Fare: ${routeResponse.route.estimatedFareFormatted}',
+        '  - Estimated Fare: ${routeResponse.route?.estimatedFareFormatted ?? 'N/A'}',
       );
       debugPrint(
-        '  - Number of Segments: ${routeResponse.route.segments.length}',
+        '  - Number of Segments: ${routeResponse.route?.segments.length ?? 0}',
       );
 
       // Print segment details
-      for (int i = 0; i < routeResponse.route.segments.length; i++) {
-        final segment = routeResponse.route.segments[i];
-        debugPrint('  - Segment $i: ${segment.method}');
-        debugPrint('    * From: ${segment.startLocation.name}');
-        debugPrint('    * To: ${segment.endLocation.name}');
-        debugPrint('    * Duration: ${segment.durationSeconds}s');
-        debugPrint('    * Distance: ${segment.distanceMeters}m');
-        debugPrint('    * Stops: ${segment.numStops}');
+      final route3 = routeResponse.route;
+      if (route3 != null) {
+        for (int i = 0; i < route3.segments.length; i++) {
+          final segment = route3.segments[i];
+          debugPrint('  - Segment $i: ${segment.method}');
+          debugPrint('    * From: ${segment.startLocation.name}');
+          debugPrint('    * To: ${segment.endLocation.name}');
+          debugPrint('    * Duration: ${segment.durationSeconds}s');
+          debugPrint('    * Distance: ${segment.distanceMeters}m');
+          debugPrint('    * Stops: ${segment.numStops}');
+        }
       }
 
       if (!mounted) return;
@@ -616,6 +649,7 @@ class _MapHomePageState extends State<MapHomePage> {
     });
 
     try {
+      // Use center point instead of bounding box
       final result = await _overpassService.getTransitStops(center);
 
       if (!mounted) return;
@@ -731,7 +765,7 @@ class _MapHomePageState extends State<MapHomePage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red,
+        backgroundColor: Theme.of(context).colorScheme.error,
         duration: const Duration(seconds: 3),
       ),
     );
@@ -743,7 +777,7 @@ class _MapHomePageState extends State<MapHomePage> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(Icons.check_circle, color: Colors.white),
+            Icon(Icons.check_circle, color: Theme.of(context).colorScheme.onPrimary),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -810,13 +844,13 @@ class _MapHomePageState extends State<MapHomePage> {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.map_outlined,
                 size: 20,
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.onPrimary,
               ),
             ),
             const SizedBox(width: 8),
@@ -848,24 +882,32 @@ class _MapHomePageState extends State<MapHomePage> {
               children: [
                 // ── Map (no onTap — we intercept taps in Flutter instead) ──
                 GoogleMap(
-                    initialCameraPosition: CameraPosition(
-                      target: initialPos,
-                      zoom: 14,
-                    ),
-                    onMapCreated: (c) {
-                      _mapController = c;
-                      if (_myLocation != null) {
-                        c.animateCamera(CameraUpdate.newLatLng(_myLocation!));
-                      }
-                      _updateMarkers();
-                    },
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    markers: _markers,
-                    polylines: _polylines,
-                    mapType: MapType.normal,
-                    zoomControlsEnabled: false,
+                  initialCameraPosition: CameraPosition(
+                    target: initialPos,
+                    zoom: 14,
                   ),
+                  onMapCreated: (c) {
+                    _mapController = c;
+                    if (_myLocation != null) {
+                      c.animateCamera(CameraUpdate.newLatLng(_myLocation!));
+                    }
+                    _updateMarkers();
+                  },
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  markers: _markers,
+                  polylines: _polylines,
+                  mapType: MapType.normal,
+                  zoomControlsEnabled: false,
+                  // Performance optimizations
+                  tiltGesturesEnabled: false,
+                  rotateGesturesEnabled: false,
+                  scrollGesturesEnabled: true,
+                  zoomGesturesEnabled: true,
+                  compassEnabled: false,
+                  mapToolbarEnabled: false,
+                  trafficEnabled: false,
+                ),
                 // ── Flutter tap interceptor covering only the map area ──
                 // Sits on top of the native map view but stops exactly at
                 // the panel's top edge, so panel taps never reach this layer.
@@ -922,41 +964,41 @@ class _MapHomePageState extends State<MapHomePage> {
                   child: Material(
                     color: Colors.transparent,
                     child: AnimatedSize(
-                        duration: const Duration(milliseconds: 250),
-                        curve: Curves.easeInOut,
-                        alignment: Alignment.bottomCenter,
-                        child: _panelExpanded
-                            ? _ExpandedPanel(
-                                onCollapse: () =>
-                                    setState(() => _panelExpanded = false),
-                                child: _ControlPanel(
-                                  pickMode: _pickMode,
-                                  onPickModeChanged: (m) =>
-                                      setState(() => _pickMode = m),
-                                  myLocation: _myLocation,
-                                  start: _start,
-                                  end: _end,
-                                  startAddress: _startAddress,
-                                  endAddress: _endAddress,
-                                  locationError: _locationError,
-                                  isRouting: _isRouting,
-                                  routeError: _routeError,
-                                  routeDistanceKm: _routeDistanceKm,
-                                  showTransit: _showTransit,
-                                  isLoadingTransit: _isLoadingTransit,
-                                  transitError: _transitError,
-                                  onMeToStart: _meToStart,
-                                  onMeToEnd: _meToEnd,
-                                  onShowTransit: _toggleTransit,
-                                  onClear: _clearPoints,
-                                  onRequestRoute: _requestRoute,
-                                ),
-                              )
-                            : _CollapsedPanelBar(
-                                onExpand: () =>
-                                    setState(() => _panelExpanded = true),
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeInOut,
+                      alignment: Alignment.bottomCenter,
+                      child: _panelExpanded
+                          ? _ExpandedPanel(
+                              onCollapse: () =>
+                                  setState(() => _panelExpanded = false),
+                              child: _ControlPanel(
+                                pickMode: _pickMode,
+                                onPickModeChanged: (m) =>
+                                    setState(() => _pickMode = m),
+                                myLocation: _myLocation,
+                                start: _start,
+                                end: _end,
+                                startAddress: _startAddress,
+                                endAddress: _endAddress,
+                                locationError: _locationError,
+                                isRouting: _isRouting,
+                                routeError: _routeError,
+                                routeDistanceKm: _routeDistanceKm,
+                                showTransit: _showTransit,
+                                isLoadingTransit: _isLoadingTransit,
+                                transitError: _transitError,
+                                onMeToStart: _meToStart,
+                                onMeToEnd: _meToEnd,
+                                onShowTransit: _toggleTransit,
+                                onClear: _clearPoints,
+                                onRequestRoute: _requestRoute,
                               ),
-                      ),
+                            )
+                          : _CollapsedPanelBar(
+                              onExpand: () =>
+                                  setState(() => _panelExpanded = true),
+                            ),
+                    ),
                   ),
                 ),
               ],
@@ -999,12 +1041,12 @@ class _SearchBar extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.search,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 size: 20,
               ),
             ),
@@ -1014,7 +1056,7 @@ class _SearchBar extends StatelessWidget {
                 controller: controller,
                 decoration: InputDecoration(
                   hintText: 'Search for a place...',
-                  hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -1030,7 +1072,7 @@ class _SearchBar extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isLoading ? Colors.grey[300] : AppColors.primary,
+                color: isLoading ? Theme.of(context).colorScheme.surfaceContainerHighest : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: IconButton(
@@ -1041,11 +1083,11 @@ class _SearchBar extends StatelessWidget {
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.grey[600]!,
+                              Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           ),
                         ),
                       )
-                    : const Icon(Icons.search, color: Colors.white, size: 20),
+                    : Icon(Icons.search, color: Theme.of(context).colorScheme.onPrimary, size: 20),
                 onPressed: isLoading ? null : onSearch,
               ),
             ),
@@ -1064,9 +1106,9 @@ class _SearchResultsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(20),
           topRight: Radius.circular(20),
         ),
@@ -1080,7 +1122,7 @@ class _SearchResultsSheet extends StatelessWidget {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-              color: Colors.grey[300],
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -1090,7 +1132,7 @@ class _SearchResultsSheet extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                const Icon(Icons.search, color: AppColors.primary),
+                Icon(Icons.search, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
                 Text(
                   'Search Results',
@@ -1103,7 +1145,7 @@ class _SearchResultsSheet extends StatelessWidget {
                   '${results.length} places',
                   style: Theme.of(
                     context,
-                  ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                  ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                 ),
               ],
             ),
@@ -1126,12 +1168,12 @@ class _SearchResultsSheet extends StatelessWidget {
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: _getPlaceTypeColor(place.type).withOpacity(0.1),
+                      color: _getPlaceTypeColor(place.type, context).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
                       _getPlaceTypeIcon(place.type, place.classType),
-                      color: _getPlaceTypeColor(place.type),
+                      color: _getPlaceTypeColor(place.type, context),
                       size: 20,
                     ),
                   ),
@@ -1148,7 +1190,7 @@ class _SearchResultsSheet extends StatelessWidget {
                       Text(
                         _getPlaceTypeLabel(place.type, place.classType),
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1158,7 +1200,7 @@ class _SearchResultsSheet extends StatelessWidget {
                         Text(
                           'Relevance: ${(place.importance * 100).toStringAsFixed(0)}%',
                           style: TextStyle(
-                            color: Colors.grey[500],
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                             fontSize: 11,
                           ),
                         ),
@@ -1231,7 +1273,7 @@ class _SearchResultsSheet extends StatelessWidget {
     }
   }
 
-  Color _getPlaceTypeColor(String type) {
+  Color _getPlaceTypeColor(String type, BuildContext context) {
     switch (type.toLowerCase()) {
       case 'amenity':
         return Colors.blue;
@@ -1248,7 +1290,7 @@ class _SearchResultsSheet extends StatelessWidget {
       case 'natural':
         return Colors.brown;
       default:
-        return AppColors.primary;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -1313,10 +1355,7 @@ class _ExpandedPanel extends StatelessWidget {
   final VoidCallback onCollapse;
   final Widget child;
 
-  const _ExpandedPanel({
-    required this.onCollapse,
-    required this.child,
-  });
+  const _ExpandedPanel({required this.onCollapse, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -1337,14 +1376,14 @@ class _ExpandedPanel extends StatelessWidget {
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 28,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     'Collapse',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
                   ),
                 ],
               ),
@@ -1377,19 +1416,19 @@ class _CollapsedPanelBar extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                Icon(Icons.tune_rounded, color: AppColors.primary, size: 22),
+                Icon(Icons.tune_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   'Route controls',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const Spacer(),
                 Icon(
                   Icons.keyboard_arrow_up,
                   size: 28,
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ],
             ),
@@ -1566,14 +1605,14 @@ class _ControlPanel extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: isRouting ? null : onRequestRoute,
                   icon: isRouting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                      )
                       : const Icon(Icons.directions, size: 18),
                   label: Text(
                     isRouting
@@ -1583,8 +1622,8 @@ class _ControlPanel extends StatelessWidget {
                         : 'Get Route from My Location',
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                 ),
@@ -1630,7 +1669,7 @@ class _ControlPanel extends StatelessWidget {
               'Tap map to set point • Or type above and search',
               style: Theme.of(
                 context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textHint),
+              ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             ),
           ],
         ),

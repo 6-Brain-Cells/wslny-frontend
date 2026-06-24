@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../models/auth_models.dart';
 import '../config/app_constants.dart';
 import 'api_service.dart';
 
@@ -43,33 +44,29 @@ class AuthService {
       }
 
       final response = await _apiService.post(
-        '/auth/login',
-        body: {
-          'email': email,
-          'password': password,
-        },
+        '/api/v1/auth/login',
+        body: LoginRequest(email: email, password: password).toJson(),
         includeAuth: false,
+        module: ApiService.moduleAuth,
       );
 
-      // Extract user data from response
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = UserModel.fromJson(userData);
+      final authResponse = AuthSuccessResponse.fromJson(
+        response as Map<String, dynamic>,
+      );
+      final user = UserModel(
+        firstName: authResponse.user.firstName,
+        lastName: authResponse.user.lastName,
+        email: authResponse.user.email,
+      );
 
       // Save auth tokens
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(AppConstants.isLoggedInKey, true);
+      await prefs.setString(AppConstants.authTokenKey, authResponse.token);
       await prefs.setString(
-        AppConstants.authTokenKey,
-        response['token'] as String,
+        AppConstants.refreshTokenKey,
+        authResponse.refreshToken,
       );
-      
-      // Handle refresh token if provided
-      if (response['refresh_token'] != null) {
-        await prefs.setString(
-          AppConstants.refreshTokenKey,
-          response['refresh_token'] as String,
-        );
-      }
 
       if (user.id != null) {
         await prefs.setString(AppConstants.userIdKey, user.id!);
@@ -79,8 +76,11 @@ class AuthService {
 
       return user;
     } catch (e) {
-      if (e.toString().contains('CORS') || e.toString().contains('Failed to fetch')) {
-        throw Exception('Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}');
+      if (e.toString().contains('CORS') ||
+          e.toString().contains('Failed to fetch')) {
+        throw Exception(
+          'Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}',
+        );
       }
       throw Exception('Sign in failed: $e');
     }
@@ -129,49 +129,41 @@ class AuthService {
         return user;
       }
 
-      final requestBody = <String, dynamic>{
-        'email': email,
-        'password': password,
-        'first_name': firstName,
-        'last_name': lastName,
-      };
-
-      // Add optional fields only if they're not null and not empty
-      if (mobileNumber != null && mobileNumber.isNotEmpty) {
-        requestBody['mobile_number'] = mobileNumber;
-      }
-      if (gender != null && gender.isNotEmpty) {
-        requestBody['gender'] = gender;
-      }
-      if (address != null && address.isNotEmpty) {
-        requestBody['address'] = address;
-      }
-
       final response = await _apiService.post(
-        '/auth/register',
-        body: requestBody,
+        '/api/v1/auth/register',
+        body: RegisterRequest(
+          email: email,
+          password: password,
+          firstName: firstName,
+          lastName: lastName,
+          mobileNumber: mobileNumber ?? '',
+          gender: gender,
+          address: address,
+        ).toJson(),
         includeAuth: false,
+        module: ApiService.moduleAuth,
       );
 
-      // Extract user data from response
-      final userData = response['user'] as Map<String, dynamic>;
-      final user = UserModel.fromJson(userData);
+      final authResponse = AuthSuccessResponse.fromJson(
+        response as Map<String, dynamic>,
+      );
+      final user = UserModel(
+        firstName: authResponse.user.firstName,
+        lastName: authResponse.user.lastName,
+        email: authResponse.user.email,
+        mobileNumber: mobileNumber,
+        gender: gender,
+        address: address,
+      );
 
       // Save auth tokens
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(AppConstants.isLoggedInKey, true);
+      await prefs.setString(AppConstants.authTokenKey, authResponse.token);
       await prefs.setString(
-        AppConstants.authTokenKey,
-        response['token'] as String,
+        AppConstants.refreshTokenKey,
+        authResponse.refreshToken,
       );
-      
-      // Handle refresh token if provided
-      if (response['refresh_token'] != null) {
-        await prefs.setString(
-          AppConstants.refreshTokenKey,
-          response['refresh_token'] as String,
-        );
-      }
 
       if (user.id != null) {
         await prefs.setString(AppConstants.userIdKey, user.id!);
@@ -181,8 +173,11 @@ class AuthService {
 
       return user;
     } catch (e) {
-      if (e.toString().contains('CORS') || e.toString().contains('Failed to fetch')) {
-        throw Exception('Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}');
+      if (e.toString().contains('CORS') ||
+          e.toString().contains('Failed to fetch')) {
+        throw Exception(
+          'Network error: Unable to connect to server. This appears to be a CORS (Cross-Origin Resource Sharing) issue. Please ensure the backend server allows requests from ${Uri.base.origin}',
+        );
       }
       throw Exception('Sign up failed: $e');
     }
@@ -191,28 +186,24 @@ class AuthService {
   // Sign in with Google
   Future<UserModel> signInWithGoogle({String? idToken}) async {
     try {
-      if (idToken != null) {
-        // Use provided ID token (from Google Sign-In)
-        final response = await _apiService.post(
-          '/api/auth/google-login',
-          body: {'id_token': idToken},
-          includeAuth: false,
+      if (AppConstants.useMockMode) {
+        await Future.delayed(const Duration(seconds: 1));
+
+        final user = UserModel(
+          firstName: 'Google',
+          lastName: 'User',
+          email: 'google.user@example.com',
         );
 
-        // Extract user data from response
-        final userData = response['user'] as Map<String, dynamic>;
-        final user = UserModel.fromJson(userData);
-
-        // Save auth tokens
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(AppConstants.isLoggedInKey, true);
         await prefs.setString(
           AppConstants.authTokenKey,
-          response['token'] as String,
+          'mock_token_${DateTime.now().millisecondsSinceEpoch}',
         );
         await prefs.setString(
           AppConstants.refreshTokenKey,
-          response['refresh_token'] as String,
+          'mock_refresh_token_${DateTime.now().millisecondsSinceEpoch}',
         );
 
         if (user.email != null) {
@@ -220,9 +211,41 @@ class AuthService {
         }
 
         return user;
-      } else {
+      }
+
+      if (idToken == null) {
         throw Exception('Google Sign In requires ID token');
       }
+
+      final response = await _apiService.post(
+        '/api/v1/auth/google-login',
+        body: GoogleLoginRequest(idToken: idToken).toJson(),
+        includeAuth: false,
+        module: ApiService.moduleAuth,
+      );
+
+      final authResponse = AuthSuccessResponse.fromJson(
+        response as Map<String, dynamic>,
+      );
+      final user = UserModel(
+        firstName: authResponse.user.firstName,
+        lastName: authResponse.user.lastName,
+        email: authResponse.user.email,
+      );
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(AppConstants.isLoggedInKey, true);
+      await prefs.setString(AppConstants.authTokenKey, authResponse.token);
+      await prefs.setString(
+        AppConstants.refreshTokenKey,
+        authResponse.refreshToken,
+      );
+
+      if (user.email != null) {
+        await prefs.setString(AppConstants.userIdKey, user.email!);
+      }
+
+      return user;
     } catch (e) {
       throw Exception('Google sign in failed: $e');
     }
@@ -238,6 +261,49 @@ class AuthService {
       await prefs.remove(AppConstants.refreshTokenKey);
     } catch (e) {
       throw Exception('Sign out failed: $e');
+    }
+  }
+
+  // Update user profile
+  Future<void> updateProfile(UpdateProfileRequest request) async {
+    try {
+      if (AppConstants.useMockMode) return;
+      await _apiService.put(
+        '/api/v1/auth/profile',
+        body: request.toJson(),
+        module: ApiService.moduleAuth,
+      );
+    } catch (e) {
+      throw Exception('Failed to update profile: $e');
+    }
+  }
+
+  // Change password
+  Future<void> changePassword(ChangePasswordRequest request) async {
+    try {
+      if (AppConstants.useMockMode) return;
+      await _apiService.post(
+        '/api/v1/auth/change-password',
+        body: request.toJson(),
+        module: ApiService.moduleAuth,
+      );
+    } catch (e) {
+      throw Exception('Failed to change password: $e');
+    }
+  }
+
+  // Refresh token
+  Future<TokenRefresh> refreshToken(String refreshToken) async {
+    try {
+      final response = await _apiService.post(
+        '/api/v1/auth/refresh',
+        body: TokenRefresh(refresh: refreshToken).toJson(),
+        includeAuth: true,
+        module: ApiService.moduleAuth,
+      );
+      return TokenRefresh.fromJson(response as Map<String, dynamic>);
+    } catch (e) {
+      throw Exception('Failed to refresh token: $e');
     }
   }
 
@@ -259,8 +325,16 @@ class AuthService {
       }
 
       // Fetch user profile from API
-      final response = await _apiService.get('/auth/profile');
-      return UserModel.fromJson(response['user'] as Map<String, dynamic>);
+      final response = await _apiService.get(
+        '/api/v1/auth/profile',
+        module: ApiService.moduleAuth,
+      );
+      final authUser = AuthUser.fromJson(response as Map<String, dynamic>);
+      return UserModel(
+        firstName: authUser.firstName,
+        lastName: authUser.lastName,
+        email: authUser.email,
+      );
     } catch (e) {
       // If token is invalid, clear auth state
       final prefs = await SharedPreferences.getInstance();

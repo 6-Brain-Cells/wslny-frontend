@@ -1,50 +1,85 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_constants.dart';
 import '../config/env.dart';
 
 class ApiService {
   final String baseUrl = Env.backendApiBaseUrl;
+  late final Dio _dio;
 
-  // Get headers with auth token
-  Future<Map<String, String>> _getHeaders({bool includeAuth = true}) async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+  ApiService() {
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: Duration(milliseconds: AppConstants.apiTimeout),
+        receiveTimeout: Duration(milliseconds: AppConstants.apiTimeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+      ),
+    );
 
-    if (includeAuth) {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.authTokenKey);
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) async {
+          // Add auth token if needed
+          if (options.headers['requireAuth'] != false) {
+            final prefs = await SharedPreferences.getInstance();
+            final token = prefs.getString(AppConstants.authTokenKey);
+            if (token != null) {
+              options.headers['Authorization'] = 'Bearer $token';
+            }
+          }
+          // Remove the custom header
+          options.headers.remove('requireAuth');
 
-      if (token != null) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-    }
-
-    return headers;
+          debugPrint('🚀 ${options.method} Request: ${options.uri}');
+          debugPrint('Headers: ${options.headers}');
+          if (options.data != null) {
+            debugPrint('Body: ${json.encode(options.data)}');
+          }
+          handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint('✅ Response received - Status: ${response.statusCode}');
+          handler.next(response);
+        },
+        onError: (error, handler) {
+          debugPrint('❌ Error: ${error.message}');
+          debugPrint('Response: ${error.response}');
+          handler.next(error);
+        },
+      ),
+    );
   }
+
+  /// Module types for X-Module header
+  static const String moduleAuth = 'Auth';
+  static const String moduleRouting = 'Routing';
+  static const String moduleTransit = 'Transit';
+  static const String moduleUser = 'User';
 
   // GET request
   Future<dynamic> get(
     String endpoint, {
-    Map<String, String>? queryParams,
+    Map<String, dynamic>? queryParams,
     bool includeAuth = true,
+    String? module,
   }) async {
     try {
-      final uri = Uri.parse(
-        '$baseUrl$endpoint',
-      ).replace(queryParameters: queryParams);
-
-      final headers = await _getHeaders(includeAuth: includeAuth);
-
-      final response = await http
-          .get(uri, headers: headers)
-          .timeout(Duration(milliseconds: AppConstants.apiTimeout));
-
+      final headers = <String, dynamic>{'requireAuth': includeAuth};
+      if (module != null) {
+        headers['X-Module'] = module;
+      }
+      final response = await _dio.get(
+        endpoint,
+        queryParameters: queryParams,
+        options: Options(headers: headers),
+      );
       return _handleResponse(response);
     } catch (e) {
       throw Exception('GET request failed: $e');
@@ -56,38 +91,20 @@ class ApiService {
     String endpoint, {
     Map<String, dynamic>? body,
     bool includeAuth = true,
+    String? module,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _getHeaders(includeAuth: includeAuth);
-
-      debugPrint('🚀 POST Request Details:');
-      debugPrint('URL: $uri');
-      debugPrint('Headers: $headers');
-      debugPrint('Body: ${body != null ? json.encode(body) : null}');
-
-      final response = await http
-          .post(
-            uri,
-            headers: headers,
-            body: body != null ? json.encode(body) : null,
-          )
-          .timeout(Duration(milliseconds: AppConstants.apiTimeout));
-
-      debugPrint('✅ Response received - Status: ${response.statusCode}');
+      final headers = <String, dynamic>{'requireAuth': includeAuth};
+      if (module != null) {
+        headers['X-Module'] = module;
+      }
+      final response = await _dio.post(
+        endpoint,
+        data: body,
+        options: Options(headers: headers),
+      );
       return _handleResponse(response);
-    } on http.ClientException catch (e) {
-      debugPrint('❌ ClientException (likely CORS or network): $e');
-      throw Exception(
-        'Network error: Unable to connect to server. This might be a CORS issue or the server is not reachable. Details: $e',
-      );
-    } on TimeoutException catch (e) {
-      debugPrint('❌ TimeoutException: $e');
-      throw Exception(
-        'Request timeout: The server took too long to respond. Please try again.',
-      );
     } catch (e) {
-      debugPrint('❌ POST request error: $e');
       throw Exception('POST request failed: $e');
     }
   }
@@ -97,19 +114,18 @@ class ApiService {
     String endpoint, {
     Map<String, dynamic>? body,
     bool includeAuth = true,
+    String? module,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _getHeaders(includeAuth: includeAuth);
-
-      final response = await http
-          .put(
-            uri,
-            headers: headers,
-            body: body != null ? json.encode(body) : null,
-          )
-          .timeout(Duration(milliseconds: AppConstants.apiTimeout));
-
+      final headers = <String, dynamic>{'requireAuth': includeAuth};
+      if (module != null) {
+        headers['X-Module'] = module;
+      }
+      final response = await _dio.put(
+        endpoint,
+        data: body,
+        options: Options(headers: headers),
+      );
       return _handleResponse(response);
     } catch (e) {
       throw Exception('PUT request failed: $e');
@@ -117,15 +133,20 @@ class ApiService {
   }
 
   // DELETE request
-  Future<dynamic> delete(String endpoint, {bool includeAuth = true}) async {
+  Future<dynamic> delete(
+    String endpoint, {
+    bool includeAuth = true,
+    String? module,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl$endpoint');
-      final headers = await _getHeaders(includeAuth: includeAuth);
-
-      final response = await http
-          .delete(uri, headers: headers)
-          .timeout(Duration(milliseconds: AppConstants.apiTimeout));
-
+      final headers = <String, dynamic>{'requireAuth': includeAuth};
+      if (module != null) {
+        headers['X-Module'] = module;
+      }
+      final response = await _dio.delete(
+        endpoint,
+        options: Options(headers: headers),
+      );
       return _handleResponse(response);
     } catch (e) {
       throw Exception('DELETE request failed: $e');
@@ -133,31 +154,26 @@ class ApiService {
   }
 
   // Handle API response
-  dynamic _handleResponse(http.Response response) {
-    debugPrint('Response status: ${response.statusCode}');
-    debugPrint('Response body: ${response.body}');
-
-    if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return null;
-      return json.decode(response.body);
+  dynamic _handleResponse(Response response) {
+    if (response.statusCode! >= 200 && response.statusCode! < 300) {
+      if (response.data == null) return null;
+      return response.data;
     } else if (response.statusCode == 401) {
-      // Try to extract the actual error message from the response body
-      final errorMessage = _extractErrorMessage(response.body);
+      final errorMessage = _extractErrorMessage(response.data);
       if (errorMessage != null && errorMessage.isNotEmpty) {
         throw Exception(errorMessage);
       }
       throw Exception('Unauthorized. Please log in again.');
     } else if (response.statusCode == 404) {
-      // Route API and others may return 404 with a structured error (e.g. ROUTING_NO_PATH)
-      final errorMessage = _extractErrorMessage(response.body);
+      final errorMessage = _extractErrorMessage(response.data);
       if (errorMessage != null && errorMessage.isNotEmpty) {
         throw Exception(errorMessage);
       }
       throw Exception('API endpoint not found. Please check the backend URL.');
-    } else if (response.statusCode >= 500) {
+    } else if (response.statusCode! >= 500) {
       throw Exception('Server error. Please try again later.');
     } else {
-      final errorMessage = _extractErrorMessage(response.body);
+      final errorMessage = _extractErrorMessage(response.data);
       throw Exception(
         errorMessage ?? 'Request failed with status: ${response.statusCode}',
       );
@@ -165,14 +181,17 @@ class ApiService {
   }
 
   // Extract error message from response
-  String? _extractErrorMessage(String responseBody) {
+  String? _extractErrorMessage(dynamic responseData) {
     try {
-      final data = json.decode(responseBody);
+      if (responseData == null) return null;
+
+      final data = responseData is String
+          ? json.decode(responseData)
+          : responseData as Map<String, dynamic>;
 
       // Handle the new error format with errors array
       if (data['errors'] is List && data['errors'].isNotEmpty) {
         final errors = data['errors'] as List;
-        // Return the first error message or join all errors
         return errors.map((e) => e.toString()).join(', ');
       }
 
@@ -184,7 +203,9 @@ class ApiService {
       }
 
       // Handle single error message
-      return data['message'] ?? data['error'] ?? data['detail'];
+      return data['message']?.toString() ??
+          data['error']?.toString() ??
+          data['detail']?.toString();
     } catch (e) {
       return null;
     }

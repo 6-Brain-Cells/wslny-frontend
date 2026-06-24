@@ -25,24 +25,42 @@ class AppRoutes {
     switch (settings.name) {
       case init:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => const InitScreen(),
         );
       case languageSelection:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => const LanguageSelectionScreen(),
         );
       case signIn:
-        return MaterialPageRoute(builder: (_) => const SignInScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const SignInScreen(),
+        );
       case signUp:
-        return MaterialPageRoute(builder: (_) => const SignUpScreen());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const SignUpScreen(),
+        );
       case mainLayout:
-        return MaterialPageRoute(builder: (_) => const MainLayout());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const MainLayout(),
+        );
       case chatbot:
-        return MaterialPageRoute(builder: (_) => const ChatbotPage());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const ChatbotPage(),
+        );
       case profile:
-        return MaterialPageRoute(builder: (_) => const ProfilePage());
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => const ProfilePage(),
+        );
       case routeOptions:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => const Scaffold(
             body: RewardsPage(),
           ),
@@ -51,16 +69,19 @@ class AppRoutes {
         final routeResponse = settings.arguments as RouteResponse?;
         if (routeResponse == null) {
           return MaterialPageRoute(
+            settings: settings,
             builder: (_) => const Scaffold(
               body: Center(child: Text('Route data not found')),
             ),
           );
         }
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => RouteResultsPage(routeResponse: routeResponse),
         );
       default:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => Scaffold(
             body: Center(child: Text('No route defined for ${settings.name}')),
           ),

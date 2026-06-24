@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/route_models.dart';
+import '../models/route_addon_models.dart';
+import '../models/coordinate.dart';
 import '../config/app_constants.dart';
 import 'api_service.dart';
 
@@ -21,16 +23,18 @@ class RouteService {
       final request = RouteRequest(
         text: text,
         filter: filter,
-        currentLatitude: currentLatitude,
-        currentLongitude: currentLongitude,
+        currentLocation: currentLatitude != null && currentLongitude != null
+            ? Coordinate(lat: currentLatitude, lon: currentLongitude)
+            : null,
       );
 
       debugPrint('🚌 Route Request (Text): ${request.toJson()}');
 
       final response = await _apiService.post(
-        '/route',
+        '/api/v1/route',
         body: request.toJson(),
         includeAuth: true,
+        module: ApiService.moduleRouting,
       );
 
       debugPrint('🚌 Route Response: $response');
@@ -63,30 +67,22 @@ class RouteService {
         );
       }
 
-      final requestBody = <String, dynamic>{
-        'origin': {
-          'lat': originLat,
-          'lon': originLon,
-        },
-        'destination': {
-          'lat': destinationLat,
-          'lon': destinationLon,
-        },
-        'filter': filter.value,
-      };
+      final request = RouteRequest(
+        origin: Coordinate(lat: originLat, lon: originLon),
+        destination: Coordinate(lat: destinationLat, lon: destinationLon),
+        filter: filter,
+        currentLocation: currentLatitude != null && currentLongitude != null
+            ? Coordinate(lat: currentLatitude, lon: currentLongitude)
+            : null,
+      );
 
-      // Add current location if provided (as optional query parameters)
-      String endpoint = '/route';
-      if (currentLatitude != null && currentLongitude != null) {
-        endpoint += '?current_latitude=$currentLatitude&current_longitude=$currentLongitude';
-      }
-
-      debugPrint('🚌 Route Request (Coordinates): $requestBody');
+      debugPrint('🚌 Route Request (Coordinates): ${request.toJson()}');
 
       final response = await _apiService.post(
-        endpoint,
-        body: requestBody,
+        '/api/v1/route',
+        body: request.toJson(),
         includeAuth: true,
+        module: ApiService.moduleRouting,
       );
 
       debugPrint('🚌 Route Response: $response');
@@ -95,6 +91,129 @@ class RouteService {
     } catch (e) {
       debugPrint('❌ Route request failed: $e');
       throw Exception('Failed to get route: $e');
+    }
+  }
+
+  /// Get route history
+  Future<List<RouteHistoryItem>> getRouteHistory() async {
+    try {
+      if (AppConstants.useMockMode) return [];
+      final response = await _apiService.get(
+        '/api/v1/route/history',
+        module: ApiService.moduleRouting,
+      );
+      if (response is List) {
+        return response
+            .map((e) =>
+                RouteHistoryItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('❌ Route history failed: $e');
+      throw Exception('Failed to get route history: $e');
+    }
+  }
+
+  /// Get route alternatives
+  Future<List<dynamic>> getRouteAlternatives(
+    RouteAlternativesRequest request,
+  ) async {
+    try {
+      if (AppConstants.useMockMode) return [];
+      final response = await _apiService.post(
+        '/api/v1/routes/alternatives',
+        body: request.toJson(),
+        module: ApiService.moduleRouting,
+      );
+      if (response is List) return response;
+      return [];
+    } catch (e) {
+      debugPrint('❌ Route alternatives failed: $e');
+      throw Exception('Failed to get route alternatives: $e');
+    }
+  }
+
+  /// Submit route feedback
+  Future<void> submitRouteFeedback(RouteFeedbackRequest request) async {
+    try {
+      if (AppConstants.useMockMode) return;
+      await _apiService.post(
+        '/api/v1/routes/feedback',
+        body: request.toJson(),
+        module: ApiService.moduleRouting,
+      );
+    } catch (e) {
+      debugPrint('❌ Route feedback failed: $e');
+      throw Exception('Failed to submit route feedback: $e');
+    }
+  }
+
+  /// Get route metadata
+  Future<RouteMetadataResponse> getRouteMetadata() async {
+    try {
+      if (AppConstants.useMockMode) {
+        return RouteMetadataResponse(
+          filters: [],
+          requestModes: ['text', 'map'],
+          queryParams: [],
+          coordinateBounds: {},
+          transportMethods: ['walk', 'bus', 'metro', 'microbus'],
+        );
+      }
+      final response = await _apiService.get(
+        '/api/v1/routes/metadata',
+        module: ApiService.moduleRouting,
+      );
+      return RouteMetadataResponse.fromJson(
+        response as Map<String, dynamic>,
+      );
+    } catch (e) {
+      debugPrint('❌ Route metadata failed: $e');
+      throw Exception('Failed to get route metadata: $e');
+    }
+  }
+
+  /// Search route by destination text
+  Future<RouteSearchResponse> searchRoute(RouteSearchRequest request) async {
+    try {
+      if (AppConstants.useMockMode) {
+        return RouteSearchResponse(status: 'found');
+      }
+      final response = await _apiService.post(
+        '/api/v1/routes/search',
+        body: request.toJson(),
+        module: ApiService.moduleRouting,
+      );
+      return RouteSearchResponse.fromJson(
+        response as Map<String, dynamic>,
+      );
+    } catch (e) {
+      debugPrint('❌ Route search failed: $e');
+      throw Exception('Failed to search route: $e');
+    }
+  }
+
+  /// Confirm search result and get route
+  Future<RouteResponse> confirmSearch(
+    RouteSearchConfirmRequest request,
+  ) async {
+    try {
+      if (AppConstants.useMockMode) {
+        return _getMockRouteResponse(
+          request.destinationName ?? 'Searched Destination',
+          RouteFilter.fromValue(request.filter ?? 1),
+        );
+      }
+      final response = await _apiService.post(
+        '/api/v1/routes/search/confirm',
+        body: request.toJson(),
+        module: ApiService.moduleRouting,
+      );
+      return RouteResponse.fromJson(response as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('❌ Route search confirm failed: $e');
+      throw Exception('Failed to confirm search: $e');
     }
   }
 
@@ -120,24 +239,48 @@ class RouteService {
         totalDistanceMeters: 8500,
         segments: [
           RouteSegment(
-            startLocation: RouteLocation(lat: 30.0444, lon: 31.2357, name: 'Start Point'),
-            endLocation: RouteLocation(lat: 30.0500, lon: 31.2400, name: 'Bus Stop A'),
+            startLocation: RouteLocation(
+              lat: 30.0444,
+              lon: 31.2357,
+              name: 'Start Point',
+            ),
+            endLocation: RouteLocation(
+              lat: 30.0500,
+              lon: 31.2400,
+              name: 'Bus Stop A',
+            ),
             method: 'walk',
             numStops: 0,
             distanceMeters: 400,
             durationSeconds: 300, // 5 minutes
           ),
           RouteSegment(
-            startLocation: RouteLocation(lat: 30.0500, lon: 31.2400, name: 'Bus Stop A'),
-            endLocation: RouteLocation(lat: 30.0600, lon: 31.2480, name: 'Bus Stop B'),
+            startLocation: RouteLocation(
+              lat: 30.0500,
+              lon: 31.2400,
+              name: 'Bus Stop A',
+            ),
+            endLocation: RouteLocation(
+              lat: 30.0600,
+              lon: 31.2480,
+              name: 'Bus Stop B',
+            ),
             method: filter == RouteFilter.metroOnly ? 'metro' : 'bus',
             numStops: 8,
             distanceMeters: 7500,
             durationSeconds: 1200, // 20 minutes
           ),
           RouteSegment(
-            startLocation: RouteLocation(lat: 30.0600, lon: 31.2480, name: 'Bus Stop B'),
-            endLocation: RouteLocation(lat: 30.0626, lon: 31.2497, name: 'Destination'),
+            startLocation: RouteLocation(
+              lat: 30.0600,
+              lon: 31.2480,
+              name: 'Bus Stop B',
+            ),
+            endLocation: RouteLocation(
+              lat: 30.0626,
+              lon: 31.2497,
+              name: 'Destination',
+            ),
             method: 'walk',
             numStops: 0,
             distanceMeters: 600,
@@ -166,7 +309,11 @@ class RouteService {
       toName: 'Selected End Point',
       query: RouteQuery(
         origin: RouteLocation(lat: originLat, lon: originLon, name: 'Start'),
-        destination: RouteLocation(lat: destinationLat, lon: destinationLon, name: 'End'),
+        destination: RouteLocation(
+          lat: destinationLat,
+          lon: destinationLon,
+          name: 'End',
+        ),
       ),
       route: RouteInfo(
         type: 'public_transport',
@@ -177,16 +324,36 @@ class RouteService {
         totalDistanceMeters: 12000,
         segments: [
           RouteSegment(
-            startLocation: RouteLocation(lat: originLat, lon: originLon, name: 'Start Point'),
-            endLocation: RouteLocation(lat: (originLat + destinationLat) / 2, lon: (originLon + destinationLon) / 2, name: 'Transfer Point'),
-            method: filter == RouteFilter.metroOnly ? 'metro' : filter == RouteFilter.busOnly ? 'bus' : 'microbus',
+            startLocation: RouteLocation(
+              lat: originLat,
+              lon: originLon,
+              name: 'Start Point',
+            ),
+            endLocation: RouteLocation(
+              lat: (originLat + destinationLat) / 2,
+              lon: (originLon + destinationLon) / 2,
+              name: 'Transfer Point',
+            ),
+            method: filter == RouteFilter.metroOnly
+                ? 'metro'
+                : filter == RouteFilter.busOnly
+                ? 'bus'
+                : 'microbus',
             numStops: 12,
             distanceMeters: 8000,
             durationSeconds: 1800, // 30 minutes
           ),
           RouteSegment(
-            startLocation: RouteLocation(lat: (originLat + destinationLat) / 2, lon: (originLon + destinationLon) / 2, name: 'Transfer Point'),
-            endLocation: RouteLocation(lat: destinationLat, lon: destinationLon, name: 'End Point'),
+            startLocation: RouteLocation(
+              lat: (originLat + destinationLat) / 2,
+              lon: (originLon + destinationLon) / 2,
+              name: 'Transfer Point',
+            ),
+            endLocation: RouteLocation(
+              lat: destinationLat,
+              lon: destinationLon,
+              name: 'End Point',
+            ),
             method: 'walk',
             numStops: 0,
             distanceMeters: 4000,

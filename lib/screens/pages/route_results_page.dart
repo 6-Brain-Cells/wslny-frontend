@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
-import '../../config/app_colors.dart';
 import '../../models/route_models.dart';
 import '../../models/transit_stop.dart';
 import '../../services/osrm_service.dart';
@@ -40,7 +39,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     _polylines.clear();
 
     final route = widget.routeResponse.route;
-    final segments = route.segments;
+    final segments = route?.segments ?? [];
 
     // Add start marker
     if (segments.isNotEmpty) {
@@ -215,7 +214,10 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     });
 
     // Focus map on selected segment
-    final segment = widget.routeResponse.route.segments[index];
+    final route = widget.routeResponse.route;
+    final segments = route?.segments ?? [];
+    if (index >= segments.length) return;
+    final segment = segments[index];
     final bounds = LatLngBounds(
       southwest: LatLng(
         [
@@ -242,28 +244,33 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
-  Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) async {
+  Future<void> _addMetroStationMarkers(
+    RouteSegment segment,
+    int segmentIndex,
+  ) async {
     try {
       final overpassService = OverpassService();
-      
+
       // Calculate center point of the route segment for transit search
-      final centerLat = (segment.startLocation.lat + segment.endLocation.lat) / 2;
-      final centerLon = (segment.startLocation.lon + segment.endLocation.lon) / 2;
+      final centerLat =
+          (segment.startLocation.lat + segment.endLocation.lat) / 2;
+      final centerLon =
+          (segment.startLocation.lon + segment.endLocation.lon) / 2;
       final center = LatLng(centerLat, centerLon);
-      
+
       // Fetch transit stops around the segment center
       final result = await overpassService.getTransitStops(center);
-      
+
       if (!result.isSuccess) {
         debugPrint('Error fetching transit stops: ${result.error}');
         return;
       }
-      
+
       // Filter to only include metro stations
-      final metroStations = result.stops.where((stop) => 
-        stop.type == TransitStopType.metro
-      ).toList();
-      
+      final metroStations = result.stops
+          .where((stop) => stop.type == TransitStopType.metro)
+          .toList();
+
       // Add markers for each station
       for (int i = 0; i < metroStations.length; i++) {
         final station = metroStations[i];
@@ -271,7 +278,9 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
           Marker(
             markerId: MarkerId('metro_station_${segmentIndex}_$i'),
             position: station.position,
-            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueViolet,
+            ),
             infoWindow: InfoWindow(
               title: 'Metro Station',
               snippet: station.name,
@@ -279,17 +288,19 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
           ),
         );
       }
-      
-      debugPrint('Added ${metroStations.length} metro stations for segment $segmentIndex');
+
+      debugPrint(
+        'Added ${metroStations.length} metro stations for segment $segmentIndex',
+      );
     } catch (e) {
       debugPrint('Error fetching metro stations: $e');
     }
   }
 
   void _fitAllSegments() {
-    if (widget.routeResponse.route.segments.isEmpty) return;
-
-    final segments = widget.routeResponse.route.segments;
+    final route = widget.routeResponse.route;
+    final segments = route?.segments ?? [];
+    if (segments.isEmpty) return;
     final allPoints = segments
         .expand(
           (s) => [
@@ -336,7 +347,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
   Future<void> _toggleSaveRoute() async {
     try {
       final routeName =
-          '${widget.routeResponse.fromName ?? "Start"} → ${widget.routeResponse.toName ?? "Destination"}';
+          'from: ${widget.routeResponse.fromName ?? "Start"} to: ${widget.routeResponse.toName ?? "Destination"}';
 
       if (_isSaved) {
         // Remove from favorites
@@ -415,8 +426,8 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Route Details'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         actions: [
           IconButton(
             icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
@@ -444,10 +455,10 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.route, color: AppColors.primary),
+                        Icon(Icons.route, color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
                         Text(
-                          '${widget.routeResponse.fromName ?? 'Origin'} → ${widget.routeResponse.toName ?? 'Destination'}',
+                          'from: ${widget.routeResponse.fromName ?? "Origin"} to: ${widget.routeResponse.toName ?? "Destination"}',
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
@@ -460,22 +471,22 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                         _SummaryItem(
                           icon: Icons.access_time,
                           label: 'Duration',
-                          value: route.totalDurationFormatted,
+                          value: route?.totalDurationFormatted ?? 'N/A',
                         ),
                         _SummaryItem(
                           icon: Icons.straighten,
                           label: 'Distance',
-                          value: route.totalDistanceFormatted,
+                          value: route?.totalDistanceFormatted ?? 'N/A',
                         ),
                         _SummaryItem(
                           icon: Icons.attach_money,
                           label: 'Fare',
-                          value: route.estimatedFareFormatted,
+                          value: route?.estimatedFareFormatted ?? 'N/A',
                         ),
                         _SummaryItem(
                           icon: Icons.directions_walk,
                           label: 'Walking',
-                          value: route.walkDistanceFormatted,
+                          value: route?.walkDistanceFormatted ?? 'N/A',
                         ),
                       ],
                     ),
@@ -494,7 +505,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: Theme.of(context).dividerColor),
               ),
               clipBehavior: Clip.antiAlias,
               child: GoogleMap(
@@ -509,10 +520,10 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                 markers: _markers,
                 polylines: _polylines,
                 initialCameraPosition: CameraPosition(
-                  target: route.segments.isNotEmpty
+                  target: (route?.segments.isNotEmpty ?? false)
                       ? LatLng(
-                          route.segments.first.startLocation.lat,
-                          route.segments.first.startLocation.lon,
+                          route!.segments.first.startLocation.lat,
+                          route!.segments.first.startLocation.lon,
                         )
                       : const LatLng(30.0444, 31.2357),
                   zoom: 12,
@@ -537,7 +548,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          Icon(Icons.list, color: AppColors.primary),
+                          Icon(Icons.list, color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
                             'Step-by-step Directions',
@@ -550,9 +561,13 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                     Expanded(
                       child: ListView.builder(
                         padding: const EdgeInsets.only(bottom: 16),
-                        itemCount: route.segments.length,
+                        itemCount: route?.segments.length ?? 0,
                         itemBuilder: (context, index) {
-                          final segment = route.segments[index];
+                          final segments = route?.segments ?? [];
+                          if (index >= segments.length) {
+                            return const SizedBox.shrink();
+                          }
+                          final segment = segments[index];
                           final isSelected = index == _selectedSegmentIndex;
 
                           return Container(
@@ -562,11 +577,11 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColors.primary.withOpacity(0.1)
+                                  ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
                                   : null,
                               borderRadius: BorderRadius.circular(8),
                               border: isSelected
-                                  ? Border.all(color: AppColors.primary)
+                                  ? Border.all(color: Theme.of(context).colorScheme.primary)
                                   : null,
                             ),
                             child: ListTile(
@@ -574,7 +589,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                                 backgroundColor: _getSegmentColor(
                                   segment.method,
                                 ),
-                                foregroundColor: Colors.white,
+                                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                                 child: Icon(
                                   _getMethodIcon(segment.method),
                                   size: 20,
@@ -601,7 +616,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
                               trailing: isSelected
                                   ? Icon(
                                       Icons.keyboard_arrow_right,
-                                      color: AppColors.primary,
+                                      color: Theme.of(context).colorScheme.primary,
                                     )
                                   : null,
                               onTap: () => _onSegmentTapped(index),
@@ -627,7 +642,6 @@ class _SummaryItem extends StatelessWidget {
   final String value;
 
   const _SummaryItem({
-    super.key,
     required this.icon,
     required this.label,
     required this.value,
@@ -637,20 +651,20 @@ class _SummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, size: 20, color: Colors.grey.shade600),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         const SizedBox(height: 4),
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Colors.grey.shade600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         ),
         const SizedBox(height: 2),
         Text(
           value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );

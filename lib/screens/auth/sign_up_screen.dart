@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-import '../../config/app_colors.dart';
 import '../../config/routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
@@ -125,16 +125,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
 
-    final success = await authProvider.signInWithGoogle();
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+      if (googleUser == null) return;
 
-    if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Account created successfully!')),
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final success = await authProvider.signInWithGoogle(
+        idToken: googleAuth.idToken,
       );
-    } else if (mounted && authProvider.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created successfully!')),
+        );
+      } else if (mounted && authProvider.error != null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(authProvider.error!)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google sign-up failed: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -169,7 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Center(
@@ -177,12 +197,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    const Text(
+                    Text(
                       'Wslny',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -420,7 +440,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   l10n.termsOfService,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: AppColors.primary,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -437,7 +457,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                   l10n.privacyPolicy,
                                   style: Theme.of(context).textTheme.bodySmall
                                       ?.copyWith(
-                                        color: AppColors.primary,
+                                        color: Theme.of(context).colorScheme.primary,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
@@ -479,7 +499,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     SocialAuthButton(
                       text: l10n.continueWithGoogle,
                       icon: Icons.g_mobiledata,
-                      iconColor: AppColors.google,
+                      iconColor: const Color(0xFFDB4437),
                       onPressed: _handleGoogleSignUp,
                     ),
 

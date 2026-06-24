@@ -32,7 +32,7 @@ class _MainLayoutState extends State<MainLayout> {
     return Directionality(
       textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
-        backgroundColor: Colors.grey.shade100,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
         body: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
@@ -49,10 +49,13 @@ class _MainLayoutState extends State<MainLayout> {
           },
           child: _pages[_currentIndex],
         ),
-        bottomNavigationBar: BottomNavBar(
-          currentIndex: _currentIndex,
-          onTap: (index) => setState(() => _currentIndex = index),
-          l10n: l10n,
+        bottomNavigationBar: Directionality(
+          textDirection: TextDirection.ltr,
+          child: BottomNavBar(
+            currentIndex: _currentIndex,
+            onTap: (index) => setState(() => _currentIndex = index),
+            l10n: l10n,
+          ),
         ),
       ),
     );

@@ -1,4 +1,5 @@
 // Route request and response models
+import 'coordinate.dart';
 
 enum RouteFilter {
   optimal(1),
@@ -51,6 +52,10 @@ class RouteLocation {
   Map<String, dynamic> toJson() {
     return {'lat': lat, 'lon': lon, if (name != null) 'name': name};
   }
+
+  Coordinate toCoordinate() {
+    return Coordinate(lat: lat, lon: lon);
+  }
 }
 
 class RouteQuery {
@@ -75,15 +80,17 @@ class RouteQuery {
 
 class RouteRequest {
   final String? text;
+  final Coordinate? origin;
+  final Coordinate? destination;
+  final Coordinate? currentLocation;
   final RouteFilter? filter;
-  final double? currentLatitude;
-  final double? currentLongitude;
 
   RouteRequest({
     this.text,
+    this.origin,
+    this.destination,
+    this.currentLocation,
     this.filter,
-    this.currentLatitude,
-    this.currentLongitude,
   });
 
   Map<String, dynamic> toJson() {
@@ -93,16 +100,20 @@ class RouteRequest {
       json['text'] = text;
     }
 
+    if (origin != null) {
+      json['origin'] = origin!.toJson();
+    }
+
+    if (destination != null) {
+      json['destination'] = destination!.toJson();
+    }
+
+    if (currentLocation != null) {
+      json['current_location'] = currentLocation!.toJson();
+    }
+
     if (filter != null) {
       json['filter'] = filter!.value;
-    }
-
-    if (currentLatitude != null) {
-      json['current_latitude'] = currentLatitude;
-    }
-
-    if (currentLongitude != null) {
-      json['current_longitude'] = currentLongitude;
     }
 
     return json;
@@ -116,6 +127,7 @@ class RouteSegment {
   final int numStops;
   final int distanceMeters;
   final int durationSeconds;
+  final List<Coordinate>? polyline;
 
   RouteSegment({
     required this.startLocation,
@@ -124,6 +136,7 @@ class RouteSegment {
     required this.numStops,
     required this.distanceMeters,
     required this.durationSeconds,
+    this.polyline,
   });
 
   factory RouteSegment.fromJson(Map<String, dynamic> json) {
@@ -138,6 +151,11 @@ class RouteSegment {
       numStops: json['numStops'] as int,
       distanceMeters: (json['distanceMeters'] as num).toInt(),
       durationSeconds: json['durationSeconds'] as int,
+      polyline: json['polyline'] != null
+          ? (json['polyline'] as List)
+                .map((e) => Coordinate.fromJson(e as Map<String, dynamic>))
+                .toList()
+          : null,
     );
   }
 
@@ -149,6 +167,8 @@ class RouteSegment {
       'numStops': numStops,
       'distanceMeters': distanceMeters,
       'durationSeconds': durationSeconds,
+      if (polyline != null)
+        'polyline': polyline!.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -181,8 +201,8 @@ class RouteInfo {
   final int totalSegments;
   final int totalDistanceMeters;
   final List<RouteSegment> segments;
-  final double estimatedFare;
-  final int walkDistanceMeters;
+  final double? estimatedFare;
+  final int? walkDistanceMeters;
 
   RouteInfo({
     required this.type,
@@ -192,8 +212,8 @@ class RouteInfo {
     required this.totalSegments,
     required this.totalDistanceMeters,
     required this.segments,
-    required this.estimatedFare,
-    required this.walkDistanceMeters,
+    this.estimatedFare,
+    this.walkDistanceMeters,
   });
 
   factory RouteInfo.fromJson(Map<String, dynamic> json) {
@@ -207,8 +227,12 @@ class RouteInfo {
       segments: (json['segments'] as List)
           .map((e) => RouteSegment.fromJson(e as Map<String, dynamic>))
           .toList(),
-      estimatedFare: (json['estimatedFare'] as num).toDouble(),
-      walkDistanceMeters: (json['walkDistanceMeters'] as num).toInt(),
+      estimatedFare: json['estimatedFare'] != null
+          ? (json['estimatedFare'] as num).toDouble()
+          : null,
+      walkDistanceMeters: json['walkDistanceMeters'] != null
+          ? (json['walkDistanceMeters'] as num).toInt()
+          : null,
     );
   }
 
@@ -221,8 +245,8 @@ class RouteInfo {
       'totalSegments': totalSegments,
       'totalDistanceMeters': totalDistanceMeters,
       'segments': segments.map((s) => s.toJson()).toList(),
-      'estimatedFare': estimatedFare,
-      'walkDistanceMeters': walkDistanceMeters,
+      if (estimatedFare != null) 'estimatedFare': estimatedFare,
+      if (walkDistanceMeters != null) 'walkDistanceMeters': walkDistanceMeters,
     };
   }
 
@@ -236,16 +260,18 @@ class RouteInfo {
   }
 
   String get walkDistanceFormatted {
-    if (walkDistanceMeters < 1000) {
+    if (walkDistanceMeters == null) return 'N/A';
+    if (walkDistanceMeters! < 1000) {
       return '${walkDistanceMeters}m';
     } else {
-      final km = (walkDistanceMeters / 1000).toStringAsFixed(1);
+      final km = (walkDistanceMeters! / 1000).toStringAsFixed(1);
       return '${km}km';
     }
   }
 
   String get estimatedFareFormatted {
-    return '${estimatedFare.toStringAsFixed(2)} EGP';
+    if (estimatedFare == null) return 'N/A';
+    return '${estimatedFare!.toStringAsFixed(2)} EGP';
   }
 }
 
@@ -257,7 +283,7 @@ class RouteResponse {
   final String? fromName;
   final String? toName;
   final RouteQuery query;
-  final RouteInfo route;
+  final RouteInfo? route;
 
   RouteResponse({
     required this.requestId,
@@ -267,7 +293,7 @@ class RouteResponse {
     this.fromName,
     this.toName,
     required this.query,
-    required this.route,
+    this.route,
   });
 
   factory RouteResponse.fromJson(Map<String, dynamic> json) {
@@ -279,7 +305,9 @@ class RouteResponse {
       fromName: json['from_name'] as String?,
       toName: json['to_name'] as String?,
       query: RouteQuery.fromJson(json['query'] as Map<String, dynamic>),
-      route: RouteInfo.fromJson(json['route'] as Map<String, dynamic>),
+      route: json['route'] != null
+          ? RouteInfo.fromJson(json['route'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -292,7 +320,7 @@ class RouteResponse {
       'from_name': fromName,
       'to_name': toName,
       'query': query.toJson(),
-      'route': route.toJson(),
+      if (route != null) 'route': route!.toJson(),
     };
   }
 }

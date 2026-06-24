@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../config/app_colors.dart';
 
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
@@ -20,7 +19,7 @@ class LoadingOverlay extends StatelessWidget {
         child,
         if (isLoading)
           Container(
-            color: Colors.black.withOpacity(0.3),
+            color: Theme.of(context).shadowColor.withOpacity(0.3),
             child: Center(
               child: Card(
                 child: Padding(
@@ -28,9 +27,9 @@ class LoadingOverlay extends StatelessWidget {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const CircularProgressIndicator(
+                      CircularProgressIndicator(
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.primary,
+                          Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       if (message != null) ...[

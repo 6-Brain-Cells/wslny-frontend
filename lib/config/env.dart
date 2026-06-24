@@ -7,7 +7,7 @@ class Env {
 
   static String get backendApiBaseUrl =>
       dotenv.env['BACKEND_API_BASE_URL']?.trim().replaceAll(RegExp(r'/$'), '') ??
-      'https://wslny-backend-service.agreeablebush-4a28df70.uaenorth.azurecontainerapps.io/api';
+      'https://wslny-api.icyforest-4fb366f4.uaenorth.azurecontainerapps.io';
 
   static String get googleMapsApiKey =>
       dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';

@@ -25,15 +25,10 @@ class ProfilePage extends StatelessWidget {
               'Profile',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
                   ),
             ),
             const SizedBox(height: 16),
             _HeaderCard(name: name, email: email),
-            const SizedBox(height: 16),
-            const _BadgesCard(),
-            const SizedBox(height: 16),
-            const _RecentActivityCard(),
             const SizedBox(height: 16),
             _QuickSettingsCard(
               onLanguageTap: () {
@@ -64,12 +59,13 @@ class _HeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -78,277 +74,20 @@ class _HeaderCard extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
+              color: theme.colorScheme.primary.withOpacity(0.12),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.person_outline,
               size: 40,
-              color: AppColors.primary,
+              color: theme.colorScheme.primary,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             name,
-            style: const TextStyle(
-              fontSize: 16,
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Level 3 · Route Expert',
-            style: TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              _StatPill(label: 'Points', value: '1250'),
-              _StatPill(label: 'Badges', value: '12'),
-              _StatPill(label: 'Routes', value: '12'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StatPill extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _StatPill({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BadgesCard extends StatelessWidget {
-  const _BadgesCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Your Badges',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              _BadgeChip(
-                label: 'Top Contributor',
-                color: Color(0xFFFFF3E0),
-                textColor: Color(0xFFF57C00),
-              ),
-              _BadgeChip(
-                label: 'Route Expert',
-                color: Color(0xFFE3F2FD),
-                textColor: Color(0xFF1E88E5),
-              ),
-              _BadgeChip(
-                label: 'Early User',
-                color: Color(0xFFE8F5E9),
-                textColor: Color(0xFF2E7D32),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BadgeChip extends StatelessWidget {
-  final String label;
-  final Color color;
-  final Color textColor;
-
-  const _BadgeChip({
-    required this.label,
-    required this.color,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.workspace_premium_rounded,
-              size: 16, color: textColor),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-              color: textColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RecentActivityCard extends StatelessWidget {
-  const _RecentActivityCard();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Text(
-            'Recent Activity',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          SizedBox(height: 10),
-          _ActivityTile(
-            title: 'Shared new route via AUC',
-            time: '2 hours ago',
-            icon: Icons.share_location_rounded,
-          ),
-          SizedBox(height: 8),
-          _ActivityTile(
-            title: 'Received 5 upvotes on a route',
-            time: 'Yesterday',
-            icon: Icons.thumb_up_alt_outlined,
-          ),
-          SizedBox(height: 8),
-          _ActivityTile(
-            title: 'Earned \"Community Helper\" badge',
-            time: '2 days ago',
-            icon: Icons.workspace_premium_outlined,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityTile extends StatelessWidget {
-  final String title;
-  final String time;
-  final IconData icon;
-
-  const _ActivityTile({
-    required this.title,
-    required this.time,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 18, color: AppColors.primary),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
@@ -421,6 +160,7 @@ class _QuickSettingsCard extends StatelessWidget {
 class _DarkModeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final themeProvider = context.watch<ThemeProvider>();
     final isDark = themeProvider.isDark;
     return ListTile(
@@ -428,22 +168,22 @@ class _DarkModeRow extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: theme.colorScheme.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(Icons.dark_mode_outlined, size: 20, color: AppColors.primary),
+        child: Icon(Icons.dark_mode_outlined, size: 20, color: theme.colorScheme.primary),
       ),
-      title: const Text(
+      title: Text(
         'Dark Mode',
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+          color: theme.colorScheme.onSurface,
         ),
       ),
       trailing: Switch(
         value: isDark,
-        activeColor: AppColors.primary,
+        activeColor: theme.colorScheme.primary,
         onChanged: (v) {
           themeProvider.setThemeMode(v ? ThemeMode.dark : ThemeMode.light);
         },
@@ -482,32 +222,33 @@ class _SettingsRowState extends State<_SettingsRow> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListTile(
       onTap: widget.onTap,
       leading: Container(
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: theme.colorScheme.primary.withOpacity(0.08),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(widget.icon, size: 20, color: AppColors.primary),
+        child: Icon(widget.icon, size: 20, color: theme.colorScheme.primary),
       ),
       title: Text(
         widget.label,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w500,
-          color: AppColors.textPrimary,
+          color: theme.colorScheme.onSurface,
         ),
       ),
       trailing: widget.hasSwitch
           ? Switch(
               value: _value,
-              activeColor: AppColors.primary,
+              activeColor: theme.colorScheme.primary,
               onChanged: (v) => setState(() => _value = v),
             )
-          : const Icon(Icons.chevron_right, color: AppColors.textHint),
+          : Icon(Icons.chevron_right, color: theme.colorScheme.onSurface.withOpacity(0.4)),
     );
   }
 }

@@ -43,8 +43,8 @@ dependencies:
   # Local storage
   shared_preferences: ^2.2.2
   
-  # HTTP client for future API calls
-  http: ^1.2.0
+  # HTTP client for API calls
+  dio: ^5.4.0
   
   # Google Sign In (for future implementation)
   google_sign_in: ^6.2.1
@@ -91,6 +91,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/api/
     - .env.example
 
   # An image asset can refer to one or more resolution-specific "variants", see

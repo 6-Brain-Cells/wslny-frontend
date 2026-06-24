@@ -24,7 +24,7 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
   int _selectedSegmentIndex = 0;
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
-  bool _isSaved = false;
+  final bool _isSaved = false;
 
   @override
   void initState() {
@@ -248,8 +248,8 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     final overpassService = OverpassService();
 
     // Define bounding box around the metro route
-    final southWest = LatLng(
-      math.min(segment.startLocation.lat, segment.endLocation.lat) - 0.01,
+    double southWestLatLng(
+      math.min Function(segment.startLocation.lat, segment.endLocation.lat) Function  - 0.01,
       math.min(segment.startLocation.lon, segment.endLocation.lon) - 0.01,
     double lon1,
     double lat2,
@@ -258,13 +258,13 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     // Haversine formula for calculating distance between two points
     const earthRadius = 6371000; // Earth's radius in meters
 
-    final dLat = _toRadians(lat2 - lat1);
-    final dLon = _toRadians(lon2 - lon1);
+    final dLat = toRadians(lat2 - lat1);
+    final dLon = toRadians(lon2 - lon1);
 
     final a =
         math.sin(dLat / 2) * math.sin(dLat / 2) +
-        math.cos(_toRadians(lat1)) *
-            math.cos(_toRadians(lat2)) *
+        math.cos(toRadians(lat1)) *
+            math.cos(toRadians(lat2)) *
             math.sin(dLon / 2) *
             math.sin(dLon / 2);
 
@@ -273,11 +273,11 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     return earthRadius * c;
   }
 
-  double _toRadians(double degrees) {
+  double toRadians(double degrees) {
     return degrees * (math.pi / 180);
   }
 
-  void _fitAllSegments() {
+  void fitAllSegments() {
     if (widget.routeResponse.route.segments.isEmpty) return;
 
     final segments = widget.routeResponse.route.segments;
@@ -309,7 +309,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
-  Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) async {
+  Future<void> addMetroStationMarkers(RouteSegment segment, int segmentIndex) async {
     try {
       final overpassService = OverpassService();
       
@@ -358,7 +358,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     }
   }
 
-  Future<void> _checkIfSaved() async {
+  Future<void> checkIfSaved() async {
     try {
       final isFavorite = await ChatStorageService.isRouteFavorite(
         widget.routeResponse.requestId,
@@ -373,7 +373,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     }
   }
 
-  Future<void> _toggleSaveRoute() async {
+  Future<void> toggleSaveRoute() async {
     try {
       final routeName =
           '${widget.routeResponse.fromName ?? "Start"} → ${widget.routeResponse.toName ?? "Destination"}';
@@ -440,12 +440,12 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
         actions: [
           IconButton(
             icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
-            onPressed: _toggleSaveRoute,
+            onPressed: toggleSaveRoute,
             tooltip: _isSaved ? 'Remove from favorites' : 'Save to favorites',
           ),
           IconButton(
             icon: const Icon(Icons.zoom_out_map),
-            onPressed: _fitAllSegments,
+            onPressed: fitAllSegments,
             tooltip: 'Fit all segments',
           ),
         ],
@@ -521,7 +521,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
                   // Fit all segments after map is ready
                   Future.delayed(
                     const Duration(milliseconds: 500),
-                    _fitAllSegments,
+                    fitAllSegments,
                   );
                 },
                 markers: _markers,
@@ -599,7 +599,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
                                 ),
                               ),
                               title: Text(
-                                _getSegmentTitle(segment, index),
+                                getSegmentTitle(segment, index),
                                 style: TextStyle(
                                   fontWeight: isSelected
                                       ? FontWeight.bold
@@ -640,7 +640,7 @@ Future<void> _addMetroStationMarkers(RouteSegment segment, int segmentIndex) asy
     );
   }
 
-  String _getSegmentTitle(RouteSegment segment, int index) {
+  String getSegmentTitle(RouteSegment segment, int index) {
     final method = segment.method.toLowerCase();
     final start = segment.startLocation.name ?? 'Point ${index + 1}';
     final end = segment.endLocation.name ?? 'Point ${index + 2}';

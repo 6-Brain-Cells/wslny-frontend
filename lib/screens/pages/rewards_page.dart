@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wslny/config/app_colors.dart';
 
 /// Route-result page with two modes:
 /// - List view (route-result)
@@ -28,15 +27,15 @@ class _RewardsPageState extends State<RewardsPage> {
                   'Route Options',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Heliopolis → Downtown Cairo',
                   style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -97,6 +96,7 @@ class _ModeToggleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -105,10 +105,12 @@ class _ModeToggleChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: selected ? Colors.grey.shade200 : Colors.white,
+            color: selected
+                ? theme.colorScheme.primary.withOpacity(0.08)
+                : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
+              color: selected ? theme.colorScheme.primary : theme.dividerColor,
             ),
           ),
           child: Row(
@@ -118,8 +120,8 @@ class _ModeToggleChip extends StatelessWidget {
                 icon,
                 size: 16,
                 color: selected
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 4),
               Text(
@@ -127,8 +129,8 @@ class _ModeToggleChip extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: selected
-                      ? AppColors.primary
-                      : AppColors.textSecondary,
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withOpacity(0.7),
                   fontWeight:
                       selected ? FontWeight.w600 : FontWeight.w500,
                 ),
@@ -205,11 +207,10 @@ class _RouteOptionsMapView extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFE8F3FF),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: Theme.of(context).dividerColor),
                     ),
                     child: Stack(
                       children: [
-                        // Simple \"metro\" line.
                         Positioned(
                           left: 40,
                           top: 40,
@@ -237,7 +238,6 @@ class _RouteOptionsMapView extends StatelessWidget {
                             color: const Color(0xFFFFB74D),
                           ),
                         ),
-                        // Start / end markers.
                         const _MapMarker(
                           label: 'Heliopolis',
                           icon: Icons.radio_button_checked,
@@ -274,7 +274,6 @@ class _RouteOptionsMapView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // Small legend-like cards for the visible routes.
           Row(
             children: const [
               Expanded(
@@ -329,11 +328,11 @@ class _MapMarker extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Theme.of(context).shadowColor.withOpacity(0.08),
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -341,9 +340,9 @@ class _MapMarker extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 10,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),
@@ -371,9 +370,9 @@ class _MiniRouteLegendCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -392,18 +391,18 @@ class _MiniRouteLegendCard extends StatelessWidget {
               children: [
                 Text(
                   tag,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   '$time · $price',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -423,20 +422,23 @@ class _RouteFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: selected ? AppColors.primary.withOpacity(0.1) : Colors.white,
+        color: selected
+            ? theme.colorScheme.primary.withOpacity(0.1)
+            : theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: selected ? AppColors.primary : AppColors.border,
+          color: selected ? theme.colorScheme.primary : theme.dividerColor,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (selected) ...[
-            const Icon(Icons.check, size: 14, color: AppColors.primary),
+            Icon(Icons.check, size: 14, color: theme.colorScheme.primary),
             const SizedBox(width: 4),
           ],
           Text(
@@ -444,7 +446,7 @@ class _RouteFilterChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: selected ? AppColors.primary : AppColors.textSecondary,
+              color: selected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -474,12 +476,13 @@ class _RouteOptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -490,54 +493,52 @@ class _RouteOptionCard extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: theme.colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
                   tag,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
-                    color: AppColors.primary,
+                    color: theme.colorScheme.primary,
                   ),
                 ),
               ),
               const Spacer(),
-              const Icon(Icons.more_vert, size: 18, color: AppColors.textHint),
+              Icon(Icons.more_vert, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.5)),
             ],
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.schedule,
-                  size: 18, color: AppColors.textHint),
+              Icon(Icons.schedule, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 time,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const SizedBox(width: 16),
-              const Icon(Icons.attach_money,
-                  size: 18, color: AppColors.textHint),
+              Icon(Icons.attach_money, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 2),
               Text(
                 price,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
               const Spacer(),
               Text(
                 transfers,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -545,14 +546,13 @@ class _RouteOptionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.directions_bus,
-                  size: 18, color: AppColors.textHint),
+              Icon(Icons.directions_bus, size: 18, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 walkTime,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -560,14 +560,13 @@ class _RouteOptionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              const Icon(Icons.water_drop,
-                  size: 16, color: AppColors.textHint),
+              Icon(Icons.water_drop, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
-              const Text(
+              Text(
                 'Humidity',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(width: 8),
@@ -577,9 +576,9 @@ class _RouteOptionCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: humidity,
                     minHeight: 6,
-                    backgroundColor: AppColors.border,
-                    valueColor: const AlwaysStoppedAnimation<Color>(
-                      AppColors.primary,
+                    backgroundColor: theme.dividerColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -589,14 +588,13 @@ class _RouteOptionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.verified_user,
-                  size: 16, color: AppColors.textHint),
+              Icon(Icons.verified_user, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
-              const Text(
+              Text(
                 'Reliability',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(width: 8),
@@ -606,7 +604,7 @@ class _RouteOptionCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: reliability,
                     minHeight: 6,
-                    backgroundColor: AppColors.border,
+                    backgroundColor: theme.dividerColor,
                     valueColor: const AlwaysStoppedAnimation<Color>(
                       Color(0xFF66BB6A),
                     ),
@@ -616,9 +614,9 @@ class _RouteOptionCard extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 '${(reliability * 100).round()}%',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -629,8 +627,8 @@ class _RouteOptionCard extends StatelessWidget {
             child: TextButton(
               onPressed: () {},
               style: TextButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: theme.colorScheme.onPrimary,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                 shape: RoundedRectangleBorder(
@@ -651,4 +649,3 @@ class _RouteOptionCard extends StatelessWidget {
     );
   }
 }
-

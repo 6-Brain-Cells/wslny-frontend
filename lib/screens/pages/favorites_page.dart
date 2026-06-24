@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/models/route_models.dart';
 import 'package:wslny/services/chat_storage_service.dart';
 import 'route_results_page.dart';
@@ -15,6 +14,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   List<Map<String, dynamic>> _savedRoutes = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -25,7 +25,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
   Future<void> _loadSavedRoutes() async {
     try {
       final savedRoutes = await ChatStorageService.loadFavoriteRoutes();
-      
+
       setState(() {
         _savedRoutes = savedRoutes;
         _isLoading = false;
@@ -43,12 +43,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
 
     return _savedRoutes.where((route) {
       final customName = route['customName']?.toString().toLowerCase() ?? '';
-      final fromName = route['routeResponse']['from_name']?.toString().toLowerCase() ?? '';
-      final toName = route['routeResponse']['to_name']?.toString().toLowerCase() ?? '';
-      
+      final fromName =
+          route['routeResponse']['from_name']?.toString().toLowerCase() ?? '';
+      final toName =
+          route['routeResponse']['to_name']?.toString().toLowerCase() ?? '';
+
       return customName.contains(_searchQuery.toLowerCase()) ||
-             fromName.contains(_searchQuery.toLowerCase()) ||
-             toName.contains(_searchQuery.toLowerCase());
+          fromName.contains(_searchQuery.toLowerCase()) ||
+          toName.contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
@@ -56,7 +58,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
     try {
       await ChatStorageService.removeFavoriteRoute(requestId);
       await _loadSavedRoutes(); // Refresh the list
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Route removed from favorites')),
@@ -72,7 +74,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   void _navigateToRoute(Map<String, dynamic> favoriteData) {
-    final routeResponse = RouteResponse.fromJson(favoriteData['routeResponse'] as Map<String, dynamic>);
+    final routeResponse = RouteResponse.fromJson(
+      favoriteData['routeResponse'] as Map<String, dynamic>,
+    );
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -82,7 +86,14 @@ class _FavoritesPageState extends State<FavoritesPage> {
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,9 +104,8 @@ class _FavoritesPageState extends State<FavoritesPage> {
               children: [
                 Text(
                   'Favorites',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
                   ),
                 ),
                 const Spacer(),
@@ -105,7 +115,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
+                    color: theme.colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -113,7 +123,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: Colors.grey.shade600,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -134,7 +144,7 @@ class _FavoritesPageState extends State<FavoritesPage> {
           const SizedBox(height: 12),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
                 : _filteredRoutes.isEmpty
                 ? const _EmptyFavorites()
                 : ListView(
@@ -144,7 +154,9 @@ class _FavoritesPageState extends State<FavoritesPage> {
                           (favoriteData) => _SavedRouteCard(
                             favoriteData: favoriteData,
                             onTap: () => _navigateToRoute(favoriteData),
-                            onDelete: () => _removeFavoriteRoute(favoriteData['id'] as String),
+                            onDelete: () => _removeFavoriteRoute(
+                              favoriteData['id'] as String,
+                            ),
                           ),
                         )
                         .toList(),
@@ -164,22 +176,25 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Row(
         children: [
           const SizedBox(width: 12),
-          const Icon(Icons.search, color: AppColors.textHint, size: 20),
+          Icon(Icons.search, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5)),
           const SizedBox(width: 8),
           Expanded(
             child: TextField(
+              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: hint,
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
                 border: InputBorder.none,
                 isDense: true,
               ),
@@ -205,40 +220,48 @@ class _SavedRouteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final routeResponse = RouteResponse.fromJson(favoriteData['routeResponse'] as Map<String, dynamic>);
+    final theme = Theme.of(context);
+    final routeResponse = RouteResponse.fromJson(
+      favoriteData['routeResponse'] as Map<String, dynamic>,
+    );
     final customName = favoriteData['customName'] as String? ?? 'Saved Route';
-    
+
     final fromName = routeResponse.fromName ?? 'Origin';
     final toName = routeResponse.toName ?? 'Destination';
     final routeInfo = routeResponse.route;
+    if (routeInfo == null) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.favorite, size: 18, color: AppColors.primary),
+              Icon(Icons.favorite, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   customName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: AppColors.textHint),
+                icon: Icon(
+                  Icons.more_vert,
+                  size: 18,
+                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                ),
                 onSelected: (value) {
                   if (value == 'delete') {
                     onDelete();
@@ -261,46 +284,46 @@ class _SavedRouteCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '$fromName → $toName',
-            style: const TextStyle(
+            'from: $fromName to: $toName',
+            style: TextStyle(
               fontSize: 12,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              const Icon(Icons.schedule, size: 16, color: AppColors.textHint),
+              Icon(Icons.schedule, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 routeInfo.totalDurationFormatted,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(
+              Icon(
                 Icons.attach_money,
                 size: 16,
-                color: AppColors.textHint,
+                color: theme.colorScheme.onSurface.withOpacity(0.5),
               ),
               const SizedBox(width: 4),
               Text(
                 routeInfo.estimatedFareFormatted,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               const SizedBox(width: 12),
-              const Icon(Icons.straighten, size: 16, color: AppColors.textHint),
+              Icon(Icons.straighten, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.5)),
               const SizedBox(width: 4),
               Text(
                 routeInfo.totalDistanceFormatted,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -312,12 +335,12 @@ class _SavedRouteCard extends StatelessWidget {
                 child: FilledButton(
                   onPressed: onTap,
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: theme.colorScheme.primary,
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Use Route',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
+                    style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 12),
                   ),
                 ),
               ),
@@ -334,31 +357,25 @@ class _EmptyFavorites extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.favorite_border,
-            size: 64,
-            color: AppColors.textHint,
-          ),
+          Icon(Icons.favorite_border, size: 64, color: theme.colorScheme.onSurface.withOpacity(0.3)),
           const SizedBox(height: 16),
           Text(
             'No favorite routes yet',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Routes you save as favorites will appear here',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.textHint,
-            ),
+            style: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
           ),
         ],
       ),

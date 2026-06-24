@@ -1,26 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_colors.dart';
 import '../../config/app_constants.dart';
 import '../../config/routes.dart';
 import '../../l10n/app_localizations.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../widgets/common/language_button.dart';
 
 class LanguageSelectionScreen extends StatelessWidget {
   const LanguageSelectionScreen({super.key});
 
-  /// True when opened from profile (user already authenticated).
-  static bool isFromProfile(BuildContext context) {
-    return ModalRoute.of(context)?.settings.arguments == true;
-  }
-
   @override
   Widget build(BuildContext context) {
     final languageProvider = Provider.of<LanguageProvider>(context);
+    final authProvider = Provider.of<AuthProvider>(context);
     final l10n = AppLocalizations.of(context)!;
-    final fromProfile = isFromProfile(context);
 
     return Scaffold(
       body: SafeArea(
@@ -35,14 +30,14 @@ class LanguageSelectionScreen extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(
                     Icons.translate,
                     size: 40,
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
@@ -75,7 +70,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                 onTap: () async {
                   await languageProvider.setLanguage(AppConstants.englishCode);
                   if (context.mounted) {
-                    if (fromProfile) {
+                    if (authProvider.isAuthenticated) {
                       Navigator.pop(context);
                     } else {
                       Navigator.pushReplacementNamed(context, AppRoutes.signIn);
@@ -92,7 +87,7 @@ class LanguageSelectionScreen extends StatelessWidget {
                 onTap: () async {
                   await languageProvider.setLanguage(AppConstants.arabicCode);
                   if (context.mounted) {
-                    if (fromProfile) {
+                    if (authProvider.isAuthenticated) {
                       Navigator.pop(context);
                     } else {
                       Navigator.pushReplacementNamed(context, AppRoutes.signIn);

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/models/route_models.dart';
+import 'package:wslny/services/location_service.dart';
 import 'package:wslny/services/route_service.dart';
 import 'package:wslny/services/chat_storage_service.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -16,6 +16,7 @@ class ChatbotPage extends StatefulWidget {
 class _ChatbotPageState extends State<ChatbotPage> {
   final SpeechToText _speechToText = SpeechToText();
   final RouteService _routeService = RouteService();
+  final LocationService _locationService = LocationService();
   final TextEditingController _textController = TextEditingController();
   final List<ChatMessage> _messages = [];
 
@@ -23,12 +24,25 @@ class _ChatbotPageState extends State<ChatbotPage> {
   bool _isListening = false;
   bool _isProcessingRoute = false;
   String _lastWords = '';
+  double? _currentLat;
+  double? _currentLng;
 
   @override
   void initState() {
     super.initState();
     _initSpeech();
     _loadChatHistory();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    final pos = await _locationService.getCurrentPosition();
+    if (mounted && pos != null) {
+      setState(() {
+        _currentLat = pos.latitude;
+        _currentLng = pos.longitude;
+      });
+    }
   }
 
   Future<void> _loadChatHistory() async {
@@ -156,15 +170,17 @@ class _ChatbotPageState extends State<ChatbotPage> {
       final routeResponse = await _routeService.getRouteByText(
         text: text,
         filter: filter,
+        currentLatitude: _currentLat,
+        currentLongitude: _currentLng,
       );
 
       // Show confirmation message with Yes/No buttons
       _addBotMessage(
         'I found a route from "${routeResponse.fromName ?? 'Start Location'}" "" to "${routeResponse.toName ?? 'Destination'}":\n\n'
-        '🕐 Duration: ${routeResponse.route.totalDurationFormatted}\n'
-        '📍 Distance: ${routeResponse.route.totalDistanceMeters}m\n'
-        '💰 Fare: ${routeResponse.route.estimatedFareFormatted}\n'
-        '🚌 Segments: ${routeResponse.route.segments.length}\n\n'
+        '🕐 Duration: ${routeResponse.route?.totalDurationFormatted ?? 'N/A'}\n'
+        '📍 Distance: ${routeResponse.route?.totalDistanceMeters ?? 0}m\n'
+        '💰 Fare: ${routeResponse.route?.estimatedFareFormatted ?? 'N/A'}\n'
+        '🚌 Segments: ${routeResponse.route?.segments.length ?? 0}\n\n'
         'Is this the correct route?',
       );
 
@@ -237,6 +253,7 @@ class _ChatbotPageState extends State<ChatbotPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return SafeArea(
       child: Scaffold(
         appBar: AppBar(
@@ -251,27 +268,21 @@ class _ChatbotPageState extends State<ChatbotPage> {
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.chat_bubble_outline,
                   size: 18,
-                  color: Colors.white,
+                  color: theme.colorScheme.onPrimary,
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('Wslny'),
+              Text('Wslny', style: TextStyle(color: theme.colorScheme.onSurface)),
             ],
           ),
           centerTitle: false,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.person_outline),
-              onPressed: () => Navigator.pushNamed(context, AppRoutes.profile),
-              tooltip: 'Profile',
-            ),
-          ],
+          actions: const [],
         ),
         body: Column(
           children: [
@@ -326,18 +337,19 @@ class _BotBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: theme.colorScheme.primary.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
           text,
-          style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+          style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
         ),
       ),
     );
@@ -351,13 +363,14 @@ class _UserBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Align(
       alignment: Alignment.centerRight,
       child: Container(
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary,
+          color: theme.colorScheme.primary,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Text(
@@ -377,6 +390,7 @@ class _RouteBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final route = routeResponse.route;
     final fromName = routeResponse.fromName ?? 'Origin';
     final toName = routeResponse.toName ?? 'Destination';
@@ -389,24 +403,24 @@ class _RouteBubble extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.08),
+            color: theme.colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
-                  Icon(Icons.route, color: AppColors.primary, size: 16),
+                  Icon(Icons.route, color: theme.colorScheme.primary, size: 16),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      '$fromName → $toName',
-                      style: const TextStyle(
+                      'from: $fromName to: $toName',
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -417,12 +431,12 @@ class _RouteBubble extends StatelessWidget {
                 children: [
                   _RouteInfoItem(
                     icon: Icons.access_time,
-                    text: route.totalDurationFormatted,
+                    text: route?.totalDurationFormatted ?? 'N/A',
                   ),
                   const SizedBox(width: 12),
                   _RouteInfoItem(
                     icon: Icons.attach_money,
-                    text: route.estimatedFareFormatted,
+                    text: route?.estimatedFareFormatted ?? 'N/A',
                   ),
                 ],
               ),
@@ -430,13 +444,13 @@ class _RouteBubble extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Text(
+                child: Text(
                   'View Details',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: theme.colorScheme.onPrimary,
                     fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
@@ -458,14 +472,15 @@ class _RouteInfoItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 12, color: AppColors.primary),
+        Icon(icon, size: 12, color: theme.colorScheme.primary),
         const SizedBox(width: 4),
         Text(
           text,
-          style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withOpacity(0.7)),
         ),
       ],
     );
@@ -493,13 +508,15 @@ class _ChatInputBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -511,26 +528,30 @@ class _ChatInputBar extends StatelessWidget {
             child: TextField(
               controller: controller,
               enabled: !isProcessing,
+              style: TextStyle(color: theme.colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: isProcessing
                     ? 'Processing your request...'
                     : 'Ask about routes or stations...',
+                hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.5)),
+                fillColor: isDark ? const Color(0xFF0F1A1C) : Colors.white,
+                filled: true,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: theme.dividerColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(color: AppColors.border),
+                  borderSide: BorderSide(color: theme.dividerColor),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
+                  borderSide: BorderSide(
+                    color: theme.colorScheme.primary,
                     width: 1.5,
                   ),
                 ),
@@ -546,13 +567,13 @@ class _ChatInputBar extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: isListening ? Colors.red : AppColors.primary,
+                  color: isListening ? const Color(0xFFEF9A9A) : theme.colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   isListening ? Icons.stop : Icons.mic,
                   size: 20,
-                  color: Colors.white,
+                  color: theme.colorScheme.onPrimary,
                 ),
               ),
             ),
@@ -561,10 +582,10 @@ class _ChatInputBar extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: Colors.grey,
+                color: theme.colorScheme.onSurface.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.mic_off, size: 20, color: Colors.white),
+              child: Icon(Icons.mic_off, size: 20, color: theme.colorScheme.onSurface.withOpacity(0.5)),
             ),
           const SizedBox(height: 0, width: 8),
           GestureDetector(
@@ -573,22 +594,22 @@ class _ChatInputBar extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: isProcessing ? Colors.grey : AppColors.primary,
+                color: isProcessing ? theme.colorScheme.onSurface.withOpacity(0.2) : theme.colorScheme.primary,
                 shape: BoxShape.circle,
               ),
               child: isProcessing
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Colors.white,
+                        color: theme.colorScheme.onPrimary,
                       ),
                     )
-                  : const Icon(
+                  : Icon(
                       Icons.send_rounded,
                       size: 20,
-                      color: Colors.white,
+                      color: theme.colorScheme.onPrimary,
                     ),
             ),
           ),
@@ -641,7 +662,7 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
 
     try {
       final routeName =
-          '${widget.routeResponse.fromName ?? "Start"} → ${widget.routeResponse.toName ?? "Destination"}';
+          'from: ${widget.routeResponse.fromName ?? "Start"} to: ${widget.routeResponse.toName ?? "Destination"}';
 
       if (_isFavorite) {
         await ChatStorageService.removeFavoriteRoute(
@@ -686,6 +707,7 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final route = widget.routeResponse.route;
     final fromName = widget.routeResponse.fromName ?? 'Origin';
     final toName = widget.routeResponse.toName ?? 'Destination';
@@ -696,24 +718,24 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
         padding: const EdgeInsets.all(12),
         margin: const EdgeInsets.only(bottom: 8),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
+          color: theme.colorScheme.primary.withOpacity(0.1),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+          border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.help_outline, color: AppColors.primary, size: 16),
+                Icon(Icons.help_outline, color: theme.colorScheme.primary, size: 16),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     'Confirm Route',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: theme.colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -725,12 +747,12 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
                           height: 16,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: AppColors.primary,
+                            color: theme.colorScheme.primary,
                           ),
                         )
                       : Icon(
                           _isFavorite ? Icons.favorite : Icons.favorite_border,
-                          color: _isFavorite ? Colors.red : AppColors.primary,
+                          color: _isFavorite ? const Color(0xFFEF9A9A) : theme.colorScheme.primary,
                           size: 20,
                         ),
                 ),
@@ -738,11 +760,11 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
             ),
             const SizedBox(height: 8),
             Text(
-              '$fromName → $toName',
-              style: const TextStyle(
+              'from: $fromName to: $toName',
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 6),
@@ -750,12 +772,12 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
               children: [
                 _RouteInfoItem(
                   icon: Icons.access_time,
-                  text: route.totalDurationFormatted,
+                  text: route?.totalDurationFormatted ?? 'N/A',
                 ),
                 const SizedBox(width: 12),
                 _RouteInfoItem(
                   icon: Icons.attach_money,
-                  text: route.estimatedFareFormatted,
+                  text: route?.estimatedFareFormatted ?? 'N/A',
                 ),
               ],
             ),
@@ -767,13 +789,13 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
                     onPressed: widget.onNo,
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                        color: AppColors.primary.withOpacity(0.5),
+                        color: theme.colorScheme.primary.withOpacity(0.5),
                       ),
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
                     child: Text(
                       'No',
-                      style: TextStyle(color: AppColors.primary, fontSize: 12),
+                      style: TextStyle(color: theme.colorScheme.primary, fontSize: 12),
                     ),
                   ),
                 ),
@@ -782,12 +804,12 @@ class _ConfirmationBubbleState extends State<_ConfirmationBubble> {
                   child: FilledButton(
                     onPressed: widget.onYes,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: theme.colorScheme.primary,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
-                    child: const Text(
+                    child: Text(
                       'Yes',
-                      style: TextStyle(color: Colors.white, fontSize: 12),
+                      style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 12),
                     ),
                   ),
                 ),

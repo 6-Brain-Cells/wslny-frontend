@@ -32,7 +32,10 @@ class GeocodingService {
         debugPrint('Request URL: $uri');
 
         final response = await http
-            .get(uri)
+            .get(
+              uri,
+              headers: {'User-Agent': 'WslnyApp/1.0 (Flutter Transit App)'},
+            )
             .timeout(
               const Duration(seconds: 15), // Increased timeout
             );

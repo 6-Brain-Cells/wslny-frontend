@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/l10n/app_localizations.dart';
 
 class BottomNavBar extends StatelessWidget {
@@ -16,14 +15,16 @@ class BottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.08),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -34,23 +35,23 @@ class BottomNavBar extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: onTap,
         backgroundColor: Colors.transparent,
-        indicatorColor: AppColors.primary.withOpacity(0.15),
+        indicatorColor: theme.colorScheme.primary.withOpacity(0.2),
         elevation: 0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: [
           NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
+            icon: Icon(Icons.home_outlined, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            selectedIcon: Icon(Icons.home, color: theme.colorScheme.primary),
             label: l10n.navHome,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.favorite_border),
-            selectedIcon: const Icon(Icons.favorite),
+            icon: Icon(Icons.favorite_border, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            selectedIcon: Icon(Icons.favorite, color: theme.colorScheme.primary),
             label: l10n.navFavorites,
           ),
           NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
+            icon: Icon(Icons.person_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            selectedIcon: Icon(Icons.person, color: theme.colorScheme.primary),
             label: l10n.navProfile,
           ),
         ],

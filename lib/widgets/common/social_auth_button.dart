@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../config/app_colors.dart';
 
 class SocialAuthButton extends StatelessWidget {
   final String text;
@@ -25,18 +24,18 @@ class SocialAuthButton extends StatelessWidget {
       child: OutlinedButton(
         onPressed: isLoading ? null : onPressed,
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.border),
+          side: BorderSide(color: Theme.of(context).dividerColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: isLoading
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.primary),
                 ),
               )
             : Row(
@@ -44,7 +43,7 @@ class SocialAuthButton extends StatelessWidget {
                 children: [
                   Icon(
                     icon,
-                    color: iconColor ?? AppColors.textPrimary,
+                    color: iconColor ?? Theme.of(context).colorScheme.onSurface,
                     size: 20,
                   ),
                   const SizedBox(width: 12),

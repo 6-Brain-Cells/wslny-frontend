@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../config/app_colors.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -37,7 +36,7 @@ class CustomButton extends StatelessWidget {
           onPressed: isLoading ? null : onPressed,
           style: OutlinedButton.styleFrom(
             side: BorderSide(
-              color: backgroundColor ?? AppColors.border,
+              color: backgroundColor ?? Theme.of(context).dividerColor,
             ),
           ),
           child: _buildContent(),
@@ -51,7 +50,7 @@ class CustomButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: backgroundColor ?? AppColors.buttonPrimary,
+          backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.primary,
           foregroundColor: textColor ?? Colors.white,
         ),
         child: _buildContent(),

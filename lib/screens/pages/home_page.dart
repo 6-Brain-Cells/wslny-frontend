@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:wslny/config/app_colors.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/models/transit_stop.dart';
 import 'package:wslny/services/overpass_service.dart';
@@ -52,11 +51,11 @@ class _SearchCardState extends State<_SearchCard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Theme.of(context).shadowColor.withOpacity(0.06),
             blurRadius: 18,
             offset: const Offset(0, 8),
           ),
@@ -67,9 +66,9 @@ class _SearchCardState extends State<_SearchCard> {
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.directions_transit_outlined,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 8),
               Column(
@@ -79,14 +78,13 @@ class _SearchCardState extends State<_SearchCard> {
                     'Wslny',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     'Where to today?',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ],
@@ -122,7 +120,7 @@ class _SearchCardState extends State<_SearchCard> {
                 Navigator.pushNamed(context, AppRoutes.routeOptions);
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1ABC9C),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,
                   vertical: 14,
@@ -131,10 +129,10 @@ class _SearchCardState extends State<_SearchCard> {
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.search, size: 18, color: Colors.white),
+                  Icon(Icons.search, size: 18, color: Theme.of(context).colorScheme.onPrimary),
                   SizedBox(width: 6),
                   Text(
                     'Find Routes',
@@ -195,16 +193,17 @@ class _SearchField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 20),
+          Icon(icon, color: cs.primary, size: 20),
           const SizedBox(width: 10),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,20 +212,20 @@ class _SearchField extends StatelessWidget {
                 label,
                 style: Theme.of(
                   context,
-                ).textTheme.bodySmall?.copyWith(color: AppColors.textSecondary),
+                ).textTheme.bodySmall?.copyWith(color: cs.onSurface.withOpacity(0.7)),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
+                  color: cs.onSurface,
                 ),
               ),
             ],
           ),
           const Spacer(),
-          const Icon(Icons.swap_vert, color: AppColors.textHint, size: 20),
+          Icon(Icons.swap_vert, color: cs.onSurface.withOpacity(0.5), size: 20),
         ],
       ),
     );
@@ -248,6 +247,7 @@ class _FilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -256,7 +256,7 @@ class _FilterChip extends StatelessWidget {
           Icon(
             leadingIcon,
             size: 16,
-            color: selected ? AppColors.primary : AppColors.textHint,
+            color: selected ? cs.primary : cs.onSurface.withOpacity(0.5),
           ),
           const SizedBox(width: 4),
         ],
@@ -265,7 +265,7 @@ class _FilterChip extends StatelessWidget {
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,
-            color: selected ? AppColors.primary : AppColors.textSecondary,
+            color: selected ? cs.primary : cs.onSurface.withOpacity(0.7),
           ),
         ),
       ],
@@ -280,13 +280,13 @@ class _FilterChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.primary.withOpacity(0.15)
-                : Colors.grey.shade100,
+                ? cs.primary.withOpacity(0.15)
+                : cs.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: selected
-                  ? AppColors.primary
-                  : AppColors.border.withOpacity(0.7),
+                  ? cs.primary
+                  : Theme.of(context).dividerColor.withOpacity(0.7),
             ),
           ),
           child: content,
@@ -304,6 +304,7 @@ class _RoundIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       customBorder: const CircleBorder(),
@@ -311,17 +312,17 @@ class _RoundIconButton extends StatelessWidget {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.surface,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Theme.of(context).shadowColor.withOpacity(0.06),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Icon(icon, size: 18, color: AppColors.textSecondary),
+        child: Icon(icon, size: 18, color: cs.onSurface.withOpacity(0.7)),
       ),
     );
   }
@@ -334,20 +335,21 @@ class _AvatarInitial extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       width: 32,
       height: 32,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
+      decoration: BoxDecoration(
+        color: cs.primary,
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
           letter.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: cs.onPrimary,
           ),
         ),
       ),
@@ -360,6 +362,7 @@ class _HeroImageCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ClipRRect(
       borderRadius: BorderRadius.circular(20),
       child: Stack(
@@ -387,7 +390,7 @@ class _HeroImageCard extends StatelessWidget {
                     Text(
                       'Nearby metro & bus stops',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: cs.onPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -396,7 +399,7 @@ class _HeroImageCard extends StatelessWidget {
                       'Plan your next route in seconds.',
                       style: Theme.of(
                         context,
-                      ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+                      ).textTheme.bodySmall?.copyWith(color: cs.onPrimary.withOpacity(0.7)),
                     ),
                   ],
                 ),
@@ -410,17 +413,17 @@ class _HeroImageCard extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: cs.surface,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.16),
+                    color: Theme.of(context).shadowColor.withOpacity(0.16),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
               ),
-              child: const Icon(Icons.send_rounded, color: AppColors.primary),
+              child: Icon(Icons.send_rounded, color: cs.primary),
             ),
           ),
         ],
@@ -534,7 +537,7 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Column(
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -542,11 +545,11 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 12),
-          Center(child: CircularProgressIndicator()),
+          const SizedBox(height: 12),
+          const Center(child: CircularProgressIndicator()),
         ],
       );
     }
@@ -555,12 +558,12 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Nearby Stations',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -578,7 +581,7 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
     }
 
     if (_nearbyStations.isEmpty) {
-      return const Column(
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
@@ -586,13 +589,16 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           Text(
             'No nearby stations found',
-            style: TextStyle(color: AppColors.textHint, fontSize: 14),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              fontSize: 14,
+            ),
           ),
         ],
       );
@@ -601,12 +607,12 @@ class _NearbyStationsSectionState extends State<_NearbyStationsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Nearby Stations',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 12),
@@ -647,12 +653,13 @@ class _StationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -660,12 +667,12 @@ class _StationCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: cs.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.train_rounded,
-              color: AppColors.primary,
+              color: cs.primary,
               size: 22,
             ),
           ),
@@ -676,10 +683,10 @@ class _StationCard extends StatelessWidget {
               children: [
                 Text(
                   name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: cs.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -688,14 +695,14 @@ class _StationCard extends StatelessWidget {
                     Icon(
                       Icons.place_outlined,
                       size: 14,
-                      color: AppColors.textHint,
+                      color: cs.onSurface.withOpacity(0.5),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       distance,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: cs.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -707,15 +714,15 @@ class _StationCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
+              color: cs.primary.withOpacity(0.12),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               line,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w500,
-                color: AppColors.primary,
+                color: cs.primary,
               ),
             ),
           ),
@@ -732,22 +739,22 @@ class _RecentSearchesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           'Recent Searches',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        SizedBox(height: 12),
-        _RecentRouteTile(
+        const SizedBox(height: 12),
+        const _RecentRouteTile(
           title: 'Heliopolis → Downtown',
           subtitle: 'Metro + Walking · 45 min · 6 EGP',
         ),
-        SizedBox(height: 8),
-        _RecentRouteTile(
+        const SizedBox(height: 8),
+        const _RecentRouteTile(
           title: 'Nasr City → Maadi',
           subtitle: 'Bus + Metro · 52 min · 8 EGP',
         ),
@@ -764,16 +771,17 @@ class _RecentRouteTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
-          const Icon(Icons.history, color: AppColors.textHint, size: 20),
+          Icon(Icons.history, color: cs.onSurface.withOpacity(0.5), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -781,24 +789,24 @@ class _RecentRouteTile extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: cs.onSurface,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: cs.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: AppColors.textHint),
+          Icon(Icons.chevron_right, color: cs.onSurface.withOpacity(0.5)),
         ],
       ),
     );

@@ -128,7 +128,7 @@ class OverpassService {
     }
 
     if (stops.isEmpty && lastError != null) {
-      return OverpassResult.error(lastError!);
+      return OverpassResult.error(lastError);
     }
     return OverpassResult.success(stops);
   }

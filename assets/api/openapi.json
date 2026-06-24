@@ -1,0 +1,3652 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "Wslny API",
+        "version": "1.0.0",
+        "description": "API documentation for Wslny orchestration and admin endpoints."
+    },
+    "paths": {
+        "/api/health": {
+            "get": {
+                "operationId": "health_retrieve",
+                "description": "Returns service readiness status for database and gRPC dependencies.",
+                "summary": "Health check",
+                "tags": [
+                    "System"
+                ],
+                "security": [
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "503": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/feedback": {
+            "get": {
+                "operationId": "v1_admin_analytics_feedback_retrieve",
+                "summary": "List feedback with filters",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Page size (default 20)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "max_rating",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter by maximum rating (1-5)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "min_rating",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter by minimum rating (1-5)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Page offset (default 0)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Filter by user ID"
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeedbackListResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/feedback/summary": {
+            "get": {
+                "operationId": "v1_admin_analytics_feedback_summary_retrieve",
+                "summary": "Feedback aggregate statistics",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/FeedbackSummaryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/routes/filters": {
+            "get": {
+                "operationId": "v1_admin_analytics_routes_filters_retrieve",
+                "summary": "Per-user route filter statistics",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Route filter name or enum value: optimal/fastest/cheapest/bus_only/microbus_only/metro_only or 1..6"
+                    },
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "map",
+                                "text"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "success"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteFilterStatsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/routes/overview": {
+            "get": {
+                "operationId": "v1_admin_analytics_routes_overview_retrieve",
+                "summary": "Route analytics overview",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Route filter name or enum value: optimal/fastest/cheapest/bus_only/microbus_only/metro_only or 1..6"
+                    },
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "map",
+                                "text"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "success"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteAnalyticsOverviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/routes/query": {
+            "get": {
+                "operationId": "v1_admin_analytics_routes_query_retrieve",
+                "summary": "Generic route analytics query",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Route filter name or enum value: optimal/fastest/cheapest/bus_only/microbus_only/metro_only or 1..6"
+                    },
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "group_by",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Comma-separated grouping fields. Available: day, week, source, status, filter, selected_route_type"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Pagination limit (1..200)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "metrics",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Comma-separated metrics. Available: requests, success_count, failed_count, success_rate_percent, avg_total_latency_ms, avg_ai_latency_ms, avg_routing_latency_ms, avg_duration_seconds, avg_distance_meters, avg_fare, unresolved_count, unresolved_rate_percent, long_walk_count, long_walk_rate_percent"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Pagination offset (>=0)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "order",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "asc",
+                                "desc"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Sort field from selected metrics or group_by fields."
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "map",
+                                "text"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "success"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteAnalyticsQueryResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteAnalyticsQueryError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/routes/top-routes": {
+            "get": {
+                "operationId": "v1_admin_analytics_routes_top_routes_retrieve",
+                "summary": "Top requested routes",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Route filter name or enum value: optimal/fastest/cheapest/bus_only/microbus_only/metro_only or 1..6"
+                    },
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "map",
+                                "text"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "success"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteAnalyticsTopRoutesResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/routes/unresolved": {
+            "get": {
+                "operationId": "v1_admin_analytics_routes_unresolved_retrieve",
+                "summary": "Unresolved and long-walk route statistics",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "filter",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Route filter name or enum value: optimal/fastest/cheapest/bus_only/microbus_only/metro_only or 1..6"
+                    },
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "source",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "map",
+                                "text"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "failed",
+                                "success"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteUnresolvedStatsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/analytics/users/overview": {
+            "get": {
+                "operationId": "v1_admin_analytics_users_overview_retrieve",
+                "summary": "User growth and activity overview",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "from_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "to_date",
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Admin Analytics"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserAnalyticsOverviewResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/change-role": {
+            "post": {
+                "operationId": "v1_admin_change_role_create",
+                "summary": "Change user role",
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeUserRoleRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeUserRoleRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangeUserRoleRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
+                "operationId": "v1_admin_users_list",
+                "summary": "List users",
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserSummary"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{user_id}": {
+            "get": {
+                "operationId": "v1_admin_users_retrieve",
+                "summary": "Get user detail with stats",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1_admin_users_update",
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdate"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdate"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdate"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Validation error"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1_admin_users_destroy",
+                "summary": "Deactivate user (soft delete)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "user_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Admin"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/change-password": {
+            "post": {
+                "operationId": "v1_auth_change_password_create",
+                "summary": "Change password",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            },
+                            "examples": {
+                                "ChangePasswordRequest": {
+                                    "value": {
+                                        "current_password": "OldPass123!",
+                                        "new_password": "NewPass456!"
+                                    },
+                                    "summary": "Change Password Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ChangePasswordRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/MessageResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/google-login": {
+            "post": {
+                "operationId": "v1_auth_google_login_create",
+                "summary": "Login with Google",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GoogleLoginRequest"
+                            },
+                            "examples": {
+                                "GoogleLoginRequest": {
+                                    "value": {
+                                        "id_token": "google-id-token"
+                                    },
+                                    "summary": "Google Login Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GoogleLoginRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GoogleLoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthSuccessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "operationId": "v1_auth_login_create",
+                "summary": "Login user",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            },
+                            "examples": {
+                                "LoginRequest": {
+                                    "value": {
+                                        "email": "user@example.com",
+                                        "password": "StrongPass123!"
+                                    },
+                                    "summary": "Login Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthSuccessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/profile": {
+            "get": {
+                "operationId": "v1_auth_profile_retrieve",
+                "summary": "Get user profile",
+                "tags": [
+                    "Auth"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Profile data"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1_auth_profile_update",
+                "summary": "Update user profile",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProfileRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProfileRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateProfileRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "400": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/refresh": {
+            "post": {
+                "operationId": "v1_auth_refresh_create",
+                "description": "Takes a refresh type JSON web token and returns an access type JSON web\ntoken if the refresh token is valid.",
+                "tags": [
+                    "v1"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TokenRefresh"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TokenRefresh"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/TokenRefresh"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/TokenRefresh"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/register": {
+            "post": {
+                "operationId": "v1_auth_register_create",
+                "summary": "Register user",
+                "tags": [
+                    "Auth"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            },
+                            "examples": {
+                                "RegisterRequest": {
+                                    "value": {
+                                        "email": "user@example.com",
+                                        "password": "StrongPass123!",
+                                        "first_name": "Ali",
+                                        "last_name": "Hassan",
+                                        "mobile_number": "01000000000",
+                                        "gender": "male",
+                                        "address": "Cairo"
+                                    },
+                                    "summary": "Register Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AuthSuccessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorsResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/lines": {
+            "get": {
+                "operationId": "v1_lines_retrieve",
+                "description": "Returns all transport lines/routes with their type and metadata.",
+                "summary": "List all transport lines",
+                "tags": [
+                    "Transit"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/lines/{route_id}": {
+            "get": {
+                "operationId": "v1_lines_retrieve_2",
+                "description": "Returns details for a specific line including all stops in order and the route polyline.",
+                "summary": "Get line details",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "route_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Transit"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/route": {
+            "post": {
+                "operationId": "v1_route_create",
+                "description": "Send either natural language text or exact origin/destination coordinates. Filter enum values: 1=optimal, 2=fastest, 3=cheapest, 4=bus_only, 5=microbus_only, 6=metro_only. Optional query params current_latitude/current_longitude can be used when text input does not include source location.",
+                "summary": "Get route by text or map pins",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "current_latitude",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Optional current latitude. Can be omitted/null/empty."
+                    },
+                    {
+                        "in": "query",
+                        "name": "current_longitude",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Optional current longitude. Can be omitted/null/empty."
+                    }
+                ],
+                "tags": [
+                    "Routing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteRequest"
+                            },
+                            "examples": {
+                                "TextRequest": {
+                                    "value": {
+                                        "text": "عايز اروح العباسيه من مسكن",
+                                        "filter": 1
+                                    },
+                                    "summary": "Text Request"
+                                },
+                                "MapRequest": {
+                                    "value": {
+                                        "origin": {
+                                            "lat": 30.0539,
+                                            "lon": 31.2383
+                                        },
+                                        "destination": {
+                                            "lat": 30.0735,
+                                            "lon": 31.2823
+                                        },
+                                        "filter": 3
+                                    },
+                                    "summary": "Map Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "422": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                },
+                                "examples": {
+                                    "ErrorResponse": {
+                                        "value": {
+                                            "request_id": "5bb91977-11bf-476f-9fdb-7af8a6589b46",
+                                            "error": {
+                                                "code": "AI_LOCATION_NOT_FOUND",
+                                                "message": "could not geocode one or more locations"
+                                            }
+                                        },
+                                        "summary": "Error Response"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "504": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/route/history": {
+            "get": {
+                "operationId": "v1_route_history_list",
+                "summary": "Get current user route history",
+                "tags": [
+                    "Routing"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/RouteHistoryItem"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/alternatives": {
+            "post": {
+                "operationId": "v1_routes_alternatives_create",
+                "description": "Returns all found route options (bus, metro, microbus, optimal) for the given origin/destination, not just the selected one.",
+                "summary": "Get all viable route alternatives",
+                "tags": [
+                    "Routing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteAlternativesRequest"
+                            },
+                            "examples": {
+                                "AlternativesRequest": {
+                                    "value": {
+                                        "origin_lat": 30.05,
+                                        "origin_lon": 31.24,
+                                        "destination_lat": 30.07,
+                                        "destination_lon": 31.28
+                                    },
+                                    "summary": "Alternatives Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteAlternativesRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteAlternativesRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/feedback": {
+            "post": {
+                "operationId": "v1_routes_feedback_create",
+                "description": "Submit a rating (1-5) and optional comment for a completed route.",
+                "summary": "Submit route feedback",
+                "tags": [
+                    "Routing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteFeedbackRequest"
+                            },
+                            "examples": {
+                                "FeedbackRequest": {
+                                    "value": {
+                                        "request_id": "a1b2c3d4-...",
+                                        "rating": 4,
+                                        "comment": "Route was accurate, slight delay at transfer."
+                                    },
+                                    "summary": "Feedback Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteFeedbackRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteFeedbackRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "No response body"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {},
+                                    "description": "Unspecified response body"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/metadata": {
+            "get": {
+                "operationId": "v1_routes_metadata_retrieve",
+                "summary": "Get routing metadata",
+                "tags": [
+                    "Routing"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteMetadataResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/search": {
+            "post": {
+                "operationId": "v1_routes_search_create",
+                "description": "Search using destination text with current location and route filter. If destination is not found, response suggests closest known destination for user confirmation.",
+                "summary": "Search route (client-friendly alias)",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "current_latitude",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Optional fallback current latitude."
+                    },
+                    {
+                        "in": "query",
+                        "name": "current_longitude",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Optional fallback current longitude."
+                    }
+                ],
+                "tags": [
+                    "Routing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchRequest"
+                            },
+                            "examples": {
+                                "SearchTextRequest": {
+                                    "value": {
+                                        "destination_text": "العباسية",
+                                        "current_location": {
+                                            "lat": 30.1189,
+                                            "lon": 31.34
+                                        },
+                                        "filter": 1
+                                    },
+                                    "summary": "Search Text Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSearchResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "504": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/routes/search/confirm": {
+            "post": {
+                "operationId": "v1_routes_search_confirm_create",
+                "description": "Confirms destination coordinates returned by search and retrieves route.",
+                "summary": "Confirm destination and get route",
+                "tags": [
+                    "Routing"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchConfirmRequest"
+                            },
+                            "examples": {
+                                "ConfirmRequest": {
+                                    "value": {
+                                        "current_location": {
+                                            "lat": 30.1189,
+                                            "lon": 31.34
+                                        },
+                                        "destination": {
+                                            "name": "العباسية",
+                                            "lat": 30.0727,
+                                            "lon": 31.284
+                                        },
+                                        "filter": 1
+                                    },
+                                    "summary": "Confirm Request"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchConfirmRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RouteSearchConfirmRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteSuccessResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "503": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/RouteErrorResponse"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/stops/{stop_id}": {
+            "get": {
+                "operationId": "v1_stops_retrieve",
+                "description": "Returns details for a specific stop including all lines/routes passing through it.",
+                "summary": "Get stop details",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "stop_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Transit"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/stops/nearby": {
+            "get": {
+                "operationId": "v1_stops_nearby_retrieve",
+                "description": "Returns transit stops within a given radius of the specified coordinates, along with lines served at each stop.",
+                "summary": "Find stops near a location",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "lat",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Latitude of the search center",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "lon",
+                        "schema": {
+                            "type": "number",
+                            "format": "float"
+                        },
+                        "description": "Longitude of the search center",
+                        "required": true
+                    },
+                    {
+                        "in": "query",
+                        "name": "radius",
+                        "schema": {
+                            "type": "integer",
+                            "default": 500
+                        },
+                        "description": "Search radius in meters (default: 500, max: 2000)"
+                    }
+                ],
+                "tags": [
+                    "Transit"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    },
+                    {}
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/user/favorites": {
+            "get": {
+                "operationId": "v1_user_favorites_retrieve",
+                "summary": "List favorite routes",
+                "tags": [
+                    "User"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1_user_favorites_create",
+                "summary": "Save a route as favorite",
+                "tags": [
+                    "User"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateFavoriteRouteRequest"
+                            },
+                            "examples": {
+                                "SaveFavorite": {
+                                    "value": {
+                                        "name": "Home to Work",
+                                        "origin_lat": 30.05,
+                                        "origin_lon": 31.24,
+                                        "origin_name": "Home",
+                                        "destination_lat": 30.07,
+                                        "destination_lon": 31.28,
+                                        "destination_name": "Work",
+                                        "filter": 1
+                                    },
+                                    "summary": "Save Favorite"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateFavoriteRouteRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateFavoriteRouteRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "No response body"
+                    },
+                    "400": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/user/favorites/{id}": {
+            "delete": {
+                "operationId": "v1_user_favorites_destroy",
+                "summary": "Remove favorite route",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "User"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/user/preferences": {
+            "get": {
+                "operationId": "v1_user_preferences_retrieve",
+                "summary": "Get user preferences",
+                "tags": [
+                    "User"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "put": {
+                "operationId": "v1_user_preferences_update",
+                "summary": "Update user preferences",
+                "tags": [
+                    "User"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdatePreferencesRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/v1/user/saved-locations": {
+            "get": {
+                "operationId": "v1_user_saved_locations_retrieve",
+                "summary": "List saved locations",
+                "tags": [
+                    "User"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "v1_user_saved_locations_create",
+                "summary": "Create saved location",
+                "tags": [
+                    "User"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSavedLocationRequest"
+                            },
+                            "examples": {
+                                "SaveLocation": {
+                                    "value": {
+                                        "name": "Home",
+                                        "lat": 30.05,
+                                        "lon": 31.24,
+                                        "type": "home"
+                                    },
+                                    "summary": "Save Location"
+                                }
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSavedLocationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSavedLocationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "No response body"
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "additionalProperties": {},
+                                    "description": "Unspecified response body"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
+        "/api/v1/user/saved-locations/{id}": {
+            "put": {
+                "operationId": "v1_user_saved_locations_update",
+                "summary": "Update saved location",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "User"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSavedLocationRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSavedLocationRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSavedLocationRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "v1_user_saved_locations_destroy",
+                "summary": "Delete saved location",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "User"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    },
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    },
+                    "404": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "AdminUserDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "mobile_number": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "date_joined": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "total_routes": {
+                        "type": "integer"
+                    },
+                    "saved_locations_count": {
+                        "type": "integer"
+                    },
+                    "favorite_routes_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "address",
+                    "date_joined",
+                    "email",
+                    "favorite_routes_count",
+                    "first_name",
+                    "gender",
+                    "id",
+                    "is_active",
+                    "last_name",
+                    "mobile_number",
+                    "role",
+                    "saved_locations_count",
+                    "total_routes"
+                ]
+            },
+            "AdminUserUpdate": {
+                "type": "object",
+                "properties": {
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "mobile_number": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "AuthSuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "token": {
+                        "type": "string"
+                    },
+                    "refresh_token": {
+                        "type": "string"
+                    },
+                    "user": {
+                        "$ref": "#/components/schemas/AuthUser"
+                    }
+                },
+                "required": [
+                    "refresh_token",
+                    "token",
+                    "user"
+                ]
+            },
+            "AuthUser": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "first_name",
+                    "last_name"
+                ]
+            },
+            "ChangePasswordRequest": {
+                "type": "object",
+                "properties": {
+                    "current_password": {
+                        "type": "string"
+                    },
+                    "new_password": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "current_password",
+                    "new_password"
+                ]
+            },
+            "ChangeUserRoleRequest": {
+                "type": "object",
+                "properties": {
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "new_role": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "new_role",
+                    "user_id"
+                ]
+            },
+            "Coordinate": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "CreateFavoriteRouteRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "origin_lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "origin_lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "origin_name": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "destination_lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "destination_lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "destination_name": {
+                        "type": "string",
+                        "default": ""
+                    },
+                    "filter": {
+                        "type": "integer",
+                        "default": 1
+                    }
+                },
+                "required": [
+                    "destination_lat",
+                    "destination_lon",
+                    "name",
+                    "origin_lat",
+                    "origin_lon"
+                ]
+            },
+            "CreateSavedLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TypeEnum"
+                            }
+                        ],
+                        "default": "custom"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon",
+                    "name"
+                ]
+            },
+            "ErrorBody": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "message"
+                ]
+            },
+            "FeedbackListResponse": {
+                "type": "object",
+                "properties": {
+                    "feedback": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "pagination": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "feedback",
+                    "pagination"
+                ]
+            },
+            "FeedbackSummaryResponse": {
+                "type": "object",
+                "properties": {
+                    "total_feedback": {
+                        "type": "integer"
+                    },
+                    "average_rating": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "rating_distribution": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "average_rating",
+                    "rating_distribution",
+                    "total_feedback"
+                ]
+            },
+            "FilterEnum": {
+                "enum": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6
+                ],
+                "type": "integer",
+                "description": "* `1` - optimal\n* `2` - fastest\n* `3` - cheapest\n* `4` - bus_only\n* `5` - microbus_only\n* `6` - metro_only"
+            },
+            "GoogleLoginRequest": {
+                "type": "object",
+                "properties": {
+                    "id_token": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id_token"
+                ]
+            },
+            "LoginRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "password": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "password"
+                ]
+            },
+            "MessageResponse": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "PolylinePoint": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "password": {
+                        "type": "string"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "mobile_number": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "first_name",
+                    "last_name",
+                    "mobile_number",
+                    "password"
+                ]
+            },
+            "RouteAlternativesRequest": {
+                "type": "object",
+                "properties": {
+                    "origin_lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "origin_lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "destination_lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "destination_lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "destination_lat",
+                    "destination_lon",
+                    "origin_lat",
+                    "origin_lon"
+                ]
+            },
+            "RouteAnalyticsOverviewResponse": {
+                "type": "object",
+                "properties": {
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "source_breakdown": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "averages": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "daily_usage": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "averages",
+                    "daily_usage",
+                    "filters",
+                    "source_breakdown",
+                    "totals"
+                ]
+            },
+            "RouteAnalyticsQueryError": {
+                "type": "object",
+                "properties": {
+                    "error": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "error"
+                ]
+            },
+            "RouteAnalyticsQueryResponse": {
+                "type": "object",
+                "properties": {
+                    "rows": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "meta": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "filters",
+                    "meta",
+                    "rows"
+                ]
+            },
+            "RouteAnalyticsTopRoutesResponse": {
+                "type": "object",
+                "properties": {
+                    "top_routes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "filters",
+                    "top_routes"
+                ]
+            },
+            "RouteErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "error": {
+                        "$ref": "#/components/schemas/ErrorBody"
+                    }
+                },
+                "required": [
+                    "error",
+                    "request_id"
+                ]
+            },
+            "RouteFeedbackRequest": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string"
+                    },
+                    "rating": {
+                        "type": "integer",
+                        "maximum": 5,
+                        "minimum": 1,
+                        "description": "Rating from 1 (poor) to 5 (excellent)"
+                    },
+                    "comment": {
+                        "type": "string",
+                        "default": ""
+                    }
+                },
+                "required": [
+                    "rating",
+                    "request_id"
+                ]
+            },
+            "RouteFilterStatsResponse": {
+                "type": "object",
+                "properties": {
+                    "filter": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "filter"
+                ]
+            },
+            "RouteHistoryItem": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "source_type": {
+                        "type": "string"
+                    },
+                    "input_text": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "filter": {
+                        "type": "string"
+                    },
+                    "selected_route_type": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "origin_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "destination_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "error_code": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "total_distance_meters": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "total_duration_seconds": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "estimated_fare": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "walk_distance_meters": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "destination_name",
+                    "error_code",
+                    "estimated_fare",
+                    "filter",
+                    "input_text",
+                    "origin_name",
+                    "request_id",
+                    "selected_route_type",
+                    "source_type",
+                    "status",
+                    "total_distance_meters",
+                    "total_duration_seconds",
+                    "walk_distance_meters"
+                ]
+            },
+            "RouteMetadataResponse": {
+                "type": "object",
+                "properties": {
+                    "filters": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "request_modes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "query_params": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "coordinate_bounds": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "transport_methods": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "coordinate_bounds",
+                    "filters",
+                    "query_params",
+                    "request_modes",
+                    "transport_methods"
+                ]
+            },
+            "RouteOption": {
+                "type": "object",
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "description": "Selected route label. For filtered responses, this matches the requested filter name (optimal, fastest, cheapest, bus_only, microbus_only, metro_only)."
+                    },
+                    "found": {
+                        "type": "boolean"
+                    },
+                    "totalDurationSeconds": {
+                        "type": "integer"
+                    },
+                    "totalDurationFormatted": {
+                        "type": "string"
+                    },
+                    "totalSegments": {
+                        "type": "integer"
+                    },
+                    "totalDistanceMeters": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "segments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/RouteOptionSegment"
+                        }
+                    },
+                    "estimatedFare": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    },
+                    "walkDistanceMeters": {
+                        "type": "number",
+                        "format": "double",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "found",
+                    "segments",
+                    "totalDistanceMeters",
+                    "totalDurationFormatted",
+                    "totalDurationSeconds",
+                    "totalSegments",
+                    "type"
+                ]
+            },
+            "RouteOptionSegment": {
+                "type": "object",
+                "properties": {
+                    "startLocation": {
+                        "$ref": "#/components/schemas/RouteOptionSegmentLocation"
+                    },
+                    "endLocation": {
+                        "$ref": "#/components/schemas/RouteOptionSegmentLocation"
+                    },
+                    "method": {
+                        "type": "string"
+                    },
+                    "numStops": {
+                        "type": "integer"
+                    },
+                    "distanceMeters": {
+                        "type": "integer"
+                    },
+                    "durationSeconds": {
+                        "type": "integer"
+                    },
+                    "polyline": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PolylinePoint"
+                        },
+                        "default": []
+                    }
+                },
+                "required": [
+                    "distanceMeters",
+                    "durationSeconds",
+                    "endLocation",
+                    "method",
+                    "numStops",
+                    "startLocation"
+                ]
+            },
+            "RouteOptionSegmentLocation": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon",
+                    "name"
+                ]
+            },
+            "RouteQuery": {
+                "type": "object",
+                "properties": {
+                    "origin": {
+                        "$ref": "#/components/schemas/RouteQueryPoint"
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/RouteQueryPoint"
+                    }
+                },
+                "required": [
+                    "destination",
+                    "origin"
+                ]
+            },
+            "RouteQueryPoint": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "RouteRequest": {
+                "type": "object",
+                "properties": {
+                    "text": {
+                        "type": "string"
+                    },
+                    "origin": {
+                        "$ref": "#/components/schemas/Coordinate"
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/Coordinate"
+                    },
+                    "current_location": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Coordinate"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "filter": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FilterEnum"
+                            }
+                        ],
+                        "default": 1,
+                        "description": "Route filter enum: 1=optimal, 2=fastest, 3=cheapest, 4=bus_only, 5=microbus_only, 6=metro_only\n\n* `1` - optimal\n* `2` - fastest\n* `3` - cheapest\n* `4` - bus_only\n* `5` - microbus_only\n* `6` - metro_only"
+                    }
+                }
+            },
+            "RouteSearchConfirmCurrentLocation": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "RouteSearchConfirmDestination": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "RouteSearchConfirmRequest": {
+                "type": "object",
+                "properties": {
+                    "current_location": {
+                        "$ref": "#/components/schemas/RouteSearchConfirmCurrentLocation"
+                    },
+                    "destination": {
+                        "$ref": "#/components/schemas/RouteSearchConfirmDestination"
+                    },
+                    "filter": {
+                        "type": "integer",
+                        "default": 1
+                    }
+                },
+                "required": [
+                    "current_location",
+                    "destination"
+                ]
+            },
+            "RouteSearchCurrentLocation": {
+                "type": "object",
+                "properties": {
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    }
+                },
+                "required": [
+                    "lat",
+                    "lon"
+                ]
+            },
+            "RouteSearchRequest": {
+                "type": "object",
+                "properties": {
+                    "destination_text": {
+                        "type": "string"
+                    },
+                    "current_location": {
+                        "$ref": "#/components/schemas/RouteSearchCurrentLocation"
+                    },
+                    "filter": {
+                        "type": "integer",
+                        "default": 1
+                    }
+                },
+                "required": [
+                    "destination_text"
+                ]
+            },
+            "RouteSearchResponse": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string"
+                    },
+                    "route": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "suggested_destination": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                }
+            },
+            "RouteSuccessResponse": {
+                "type": "object",
+                "properties": {
+                    "request_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SourceEnum"
+                    },
+                    "intent": {
+                        "type": "string"
+                    },
+                    "filter": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FilterEnum"
+                            }
+                        ],
+                        "description": "Route filter enum: 1=optimal, 2=fastest, 3=cheapest, 4=bus_only, 5=microbus_only, 6=metro_only\n\n* `1` - optimal\n* `2` - fastest\n* `3` - cheapest\n* `4` - bus_only\n* `5` - microbus_only\n* `6` - metro_only"
+                    },
+                    "from_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "to_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "query": {
+                        "$ref": "#/components/schemas/RouteQuery"
+                    },
+                    "route": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RouteOption"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "filter",
+                    "intent",
+                    "query",
+                    "request_id",
+                    "source"
+                ]
+            },
+            "RouteUnresolvedStatsResponse": {
+                "type": "object",
+                "properties": {
+                    "unresolved_reasons": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "long_walk_count": {
+                        "type": "integer"
+                    },
+                    "top_unresolved_queries": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "filters": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    }
+                },
+                "required": [
+                    "filters",
+                    "long_walk_count",
+                    "top_unresolved_queries",
+                    "unresolved_reasons"
+                ]
+            },
+            "SourceEnum": {
+                "enum": [
+                    "text",
+                    "map"
+                ],
+                "type": "string",
+                "description": "* `text` - text\n* `map` - map"
+            },
+            "TokenRefresh": {
+                "type": "object",
+                "properties": {
+                    "access": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "refresh": {
+                        "type": "string",
+                        "writeOnly": true
+                    }
+                },
+                "required": [
+                    "access",
+                    "refresh"
+                ]
+            },
+            "TypeEnum": {
+                "enum": [
+                    "home",
+                    "work",
+                    "custom"
+                ],
+                "type": "string",
+                "description": "* `home` - home\n* `work` - work\n* `custom` - custom"
+            },
+            "UpdatePreferencesRequest": {
+                "type": "object",
+                "properties": {
+                    "default_filter": {
+                        "type": "integer"
+                    },
+                    "max_walk_distance": {
+                        "type": "integer"
+                    },
+                    "accessibility_mode": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "UpdateProfileRequest": {
+                "type": "object",
+                "properties": {
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "mobile_number": {
+                        "type": "string"
+                    },
+                    "gender": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                }
+            },
+            "UpdateSavedLocationRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "lat": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "lon": {
+                        "type": "number",
+                        "format": "double"
+                    },
+                    "type": {
+                        "$ref": "#/components/schemas/TypeEnum"
+                    }
+                }
+            },
+            "UserAnalyticsOverviewResponse": {
+                "type": "object",
+                "properties": {
+                    "totals": {
+                        "type": "object",
+                        "additionalProperties": {}
+                    },
+                    "growth": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    },
+                    "top_users_by_routes": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "growth",
+                    "top_users_by_routes",
+                    "totals"
+                ]
+            },
+            "UserSummary": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "first_name": {
+                        "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string"
+                    },
+                    "mobile_number": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "email",
+                    "first_name",
+                    "last_name"
+                ]
+            },
+            "ValidationErrorsResponse": {
+                "type": "object",
+                "properties": {
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": {}
+                        }
+                    }
+                },
+                "required": [
+                    "errors"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "jwtAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT"
+            }
+        }
+    }
+}
