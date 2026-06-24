@@ -65,7 +65,6 @@ class _MapHomePageState extends State<MapHomePage> {
   bool _panelExpanded = true;
 
   static const LatLng _defaultCenter = LatLng(30.0444, 31.2357); // Cairo
-  static const double _kExpandedPanelBarrierHeight = 420;
 
   @override
   void initState() {
@@ -150,10 +149,9 @@ class _MapHomePageState extends State<MapHomePage> {
 
     // Transit markers (metro and bus stations)
     if (_showTransit && _transitError == null) {
-      _addTransitStationsToMap(
-        _transitStops,
-        _myLocation ?? _start ?? _end ?? _defaultCenter,
-      );
+      final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
+      final transitMarkers = _buildTransitMarkers(_transitStops, center);
+      m.addAll(transitMarkers);
     }
 
     setState(
@@ -163,44 +161,37 @@ class _MapHomePageState extends State<MapHomePage> {
     );
   }
 
-  void _addTransitStationsToMap(List<TransitStop> stations, LatLng center) {
-    // Sort stations by distance from center
-    stations.sort((a, b) {
-      final distanceA = _calculateDistance(center, a.position);
-      final distanceB = _calculateDistance(center, b.position);
-      return distanceA.compareTo(distanceB);
-    });
+  Set<Marker> _buildTransitMarkers(List<TransitStop> stations, LatLng center) {
+    final markers = <Marker>{};
 
-    // Add markers for each station - LIMIT to reduce GPU load
-    int markerCount = 0;
-    const maxMarkers = 15; // Increased from 10 to show more stations
+    TransitStop? closestMetro;
+    double closestMetroDist = double.infinity;
 
-    for (int i = 0; i < stations.length && markerCount < maxMarkers; i++) {
-      final station = stations[i];
+    for (final station in stations) {
+      if (station.type != TransitStopType.metro) continue;
       final distance = _calculateDistance(center, station.position);
-
-      // Only show stations within 3km (increased from 1.5km)
       if (distance > 3000) continue;
+      if (distance < closestMetroDist) {
+        closestMetro = station;
+        closestMetroDist = distance;
+      }
+    }
 
-      final markerColor = station.type == TransitStopType.metro
-          ? BitmapDescriptor.hueViolet
-          : station.type == TransitStopType.bus
-          ? BitmapDescriptor.hueOrange
-          : BitmapDescriptor.hueBlue;
-
-      _markers.add(
+    if (closestMetro != null) {
+      markers.add(
         Marker(
-          markerId: MarkerId('transit_${station.type.name}_$i'),
-          position: station.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(markerColor),
+          markerId: const MarkerId('transit_metro'),
+          position: closestMetro.position,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
           infoWindow: InfoWindow(
-            title: _getTransitStationTitle(station),
-            snippet: '${(distance / 1000).toStringAsFixed(1)} km away',
+            title: _getTransitStationTitle(closestMetro),
+            snippet: '${(closestMetroDist / 1000).toStringAsFixed(1)} km away',
           ),
         ),
       );
-      markerCount++;
     }
+
+    return markers;
   }
 
   void _updatePolyline() {
@@ -649,8 +640,11 @@ class _MapHomePageState extends State<MapHomePage> {
     });
 
     try {
-      // Use center point instead of bounding box
-      final result = await _overpassService.getTransitStops(center);
+      var result = await _overpassService.getClosestMetroStation(center);
+
+      if (!result.isSuccess) {
+        result = await _overpassService.getTransitStops(center);
+      }
 
       if (!mounted) return;
 
@@ -668,7 +662,7 @@ class _MapHomePageState extends State<MapHomePage> {
       if (mounted) {
         setState(() {
           _isLoadingTransit = false;
-          _transitError = 'Failed to load transit stations: $e';
+          _transitError = 'Failed to find metro station: $e';
           _transitStops = [];
         });
       }
@@ -893,6 +887,7 @@ class _MapHomePageState extends State<MapHomePage> {
                     }
                     _updateMarkers();
                   },
+                  onTap: _onMapTap,
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   markers: _markers,
@@ -907,32 +902,6 @@ class _MapHomePageState extends State<MapHomePage> {
                   compassEnabled: false,
                   mapToolbarEnabled: false,
                   trafficEnabled: false,
-                ),
-                // ── Flutter tap interceptor covering only the map area ──
-                // Sits on top of the native map view but stops exactly at
-                // the panel's top edge, so panel taps never reach this layer.
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: _panelExpanded
-                      ? _kExpandedPanelBarrierHeight
-                      : _kCollapsedPanelHeight,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTapUp: (details) async {
-                      if (_mapController == null) return;
-                      final pos = details.localPosition;
-                      final sc = ScreenCoordinate(
-                        x: pos.dx.round(),
-                        y: pos.dy.round(),
-                      );
-                      try {
-                        final latLng = await _mapController!.getLatLng(sc);
-                        _onMapTap(latLng);
-                      } catch (_) {}
-                    },
-                  ),
                 ),
                 Positioned(
                   top: 8,

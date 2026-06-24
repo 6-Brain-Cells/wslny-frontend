@@ -34,6 +34,70 @@ class OverpassService {
     return await _getTransitStopsFromOverpass(center);
   }
 
+  /// Fetch the closest metro station using Google Places Text Search.
+  /// More accurate than Nearby Search for finding named metro stations.
+  Future<OverpassResult> getClosestMetroStation(LatLng center) async {
+    final key = Env.googleMapsApiKey;
+    if (key.isEmpty) {
+      return OverpassResult.error('Google Maps API key is not configured.');
+    }
+
+    try {
+      final uri = Uri.https(
+        'maps.googleapis.com',
+        '/maps/api/place/textsearch/json',
+        {
+          'query': 'metro station',
+          'location': '${center.latitude},${center.longitude}',
+          'radius': _radiusMeters.toStringAsFixed(0),
+          'key': key,
+          'language': 'en',
+        },
+      );
+
+      final response = await http
+          .get(uri)
+          .timeout(const Duration(seconds: _timeoutSeconds));
+
+      if (response.statusCode != 200) {
+        return OverpassResult.error('Places Text Search failed (${response.statusCode})');
+      }
+
+      final data = json.decode(response.body) as Map<String, dynamic>;
+      final status = data['status'] as String? ?? '';
+
+      if (status != 'OK' && status != 'ZERO_RESULTS') {
+        return OverpassResult.error('Places API error: $status');
+      }
+
+      if (status == 'ZERO_RESULTS') {
+        return OverpassResult.success([]);
+      }
+
+      final results = data['results'] as List<dynamic>? ?? [];
+      final stops = <TransitStop>[];
+
+      for (final r in results) {
+        final map = r as Map<String, dynamic>;
+        final loc = (map['geometry'] as Map?)!['location'] as Map;
+        final lat = (loc['lat'] as num).toDouble();
+        final lng = (loc['lng'] as num).toDouble();
+        final name = (map['name'] as String?) ?? 'Metro Station';
+
+        stops.add(TransitStop(
+          id: map['place_id'] as String? ?? 'metro_$lat$lng',
+          position: LatLng(lat, lng),
+          name: name,
+          type: TransitStopType.metro,
+        ));
+      }
+
+      return OverpassResult.success(stops);
+    } on Exception catch (e) {
+      return OverpassResult.error('Could not find metro station: $e');
+    }
+  }
+
   /// Fetch transit stops using Google Places Nearby Search API.
   Future<OverpassResult> _getTransitStopsFromGooglePlaces(LatLng center) async {
     final key = Env.googleMapsApiKey;

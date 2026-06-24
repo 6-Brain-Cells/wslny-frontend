@@ -27,27 +27,15 @@ class _MainLayoutState extends State<MainLayout> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final languageProvider = context.watch<LanguageProvider>();
-    final isRTL = languageProvider.isArabic;
 
     return Directionality(
-      textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+      textDirection: languageProvider.isArabic ? TextDirection.rtl : TextDirection.ltr,
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-        body: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          transitionBuilder: (child, animation) {
-            final slide = Tween<Offset>(
-              begin: Offset(isRTL ? -0.1 : 0.1, 0),
-              end: Offset.zero,
-            ).animate(animation);
-
-            return SlideTransition(
-              position: slide,
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          },
-          child: _pages[_currentIndex],
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
         ),
         bottomNavigationBar: Directionality(
           textDirection: TextDirection.ltr,
