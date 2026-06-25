@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:wslny/config/app_colors.dart';
+import 'package:wslny/config/app_constants.dart';
 import 'package:wslny/config/routes.dart';
 import 'package:wslny/providers/auth_provider.dart';
+import 'package:wslny/providers/language_provider.dart';
 import 'package:wslny/providers/theme_provider.dart';
 
 class ProfilePage extends StatelessWidget {
@@ -19,30 +21,134 @@ class ProfilePage extends StatelessWidget {
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Profile',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Profile',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ),
             const SizedBox(height: 16),
             _HeaderCard(name: name, email: email),
             const SizedBox(height: 16),
             _QuickSettingsCard(
-              onLanguageTap: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.languageSelection,
-                  arguments: true,
-                );
-              },
+              onLanguageTap: () => _showLanguagePicker(context),
             ),
             const SizedBox(height: 16),
             const _SignOutButton(),
           ],
         ),
+      ),
+    );
+  }
+}
+
+void _showLanguagePicker(BuildContext context) {
+  final languageProvider = context.read<LanguageProvider>();
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (context) {
+      final theme = Theme.of(context);
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Select Language',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _LanguageOption(
+              title: 'English',
+              subtitle: 'English',
+              isSelected: languageProvider.isEnglish,
+              onTap: () {
+                languageProvider.setLanguage(AppConstants.englishCode);
+                Navigator.pop(context);
+              },
+            ),
+            const SizedBox(height: 8),
+            _LanguageOption(
+              title: 'العربية',
+              subtitle: 'Arabic',
+              isSelected: languageProvider.isArabic,
+              onTap: () {
+                languageProvider.setLanguage(AppConstants.arabicCode);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+class _LanguageOption extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LanguageOption({
+    required this.title,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: isSelected ? theme.colorScheme.primary.withOpacity(0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        border: isSelected ? Border.all(color: theme.colorScheme.primary) : null,
+      ),
+      child: ListTile(
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w500,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 13,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
+          ),
+        ),
+        trailing: isSelected
+            ? Icon(Icons.check_circle, color: theme.colorScheme.primary)
+            : null,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        onTap: onTap,
       ),
     );
   }
@@ -132,25 +238,7 @@ class _QuickSettingsCard extends StatelessWidget {
             label: 'Language',
             onTap: onLanguageTap,
           ),
-          const _SettingsRow(
-            icon: Icons.notifications_none_rounded,
-            label: 'Notifications',
-            hasSwitch: true,
-            initialSwitchValue: true,
-          ),
           _DarkModeRow(),
-          const _SettingsRow(
-            icon: Icons.lock_outline,
-            label: 'Privacy & Security',
-          ),
-          const _SettingsRow(
-            icon: Icons.help_outline_rounded,
-            label: 'Help & Support',
-          ),
-          const _SettingsRow(
-            icon: Icons.info_outline_rounded,
-            label: 'About Wslny',
-          ),
         ],
       ),
     );

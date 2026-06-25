@@ -35,10 +35,7 @@ class _MainLayoutState extends State<MainLayout> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
 
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _pages,
-        ),
+        body: _pages[_currentIndex],
         bottomNavigationBar: Directionality(
           textDirection: TextDirection.ltr,
           child: BottomNavBar(

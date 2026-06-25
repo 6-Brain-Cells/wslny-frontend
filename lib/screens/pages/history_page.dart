@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wslny/models/route_addon_models.dart';
+import 'package:wslny/models/route_models.dart';
 import 'package:wslny/services/route_service.dart';
+import 'route_results_page.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -49,183 +51,60 @@ class _HistoryPageState extends State<HistoryPage> {
     }).toList();
   }
 
-  String _formatDuration(double? seconds) {
-    if (seconds == null) return 'N/A';
-    final minutes = (seconds / 60).round();
-    if (minutes < 60) return '${minutes}m';
-    final hours = (minutes / 60).floor();
-    final rem = minutes % 60;
-    return '${hours}h ${rem}m';
-  }
-
-  String _formatDistance(double? meters) {
-    if (meters == null) return 'N/A';
-    if (meters < 1000) return '${meters.toInt()}m';
-    final km = (meters / 1000).toStringAsFixed(1);
-    return '${km}km';
-  }
-
-  String _formatFare(double? fare) {
-    if (fare == null) return 'N/A';
-    return '${fare.toStringAsFixed(2)} EGP';
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-    final amPm = date.hour >= 12 ? 'PM' : 'AM';
-    final min = date.minute.toString().padLeft(2, '0');
-    return '${months[date.month - 1]} ${date.day}, ${date.year} – $hour:$min $amPm';
-  }
-
-  String _formatFilter(String filter) {
+  RouteFilter _parseFilter(String filter) {
     switch (filter) {
-      case '1': return 'Optimal';
-      case '2': return 'Fastest';
-      case '3': return 'Cheapest';
-      case '4': return 'Bus Only';
-      case '5': return 'Microbus Only';
-      case '6': return 'Metro Only';
-      default: return filter;
+      case '1': return RouteFilter.optimal;
+      case '2': return RouteFilter.fastest;
+      case '3': return RouteFilter.cheapest;
+      case '4': return RouteFilter.busOnly;
+      case '5': return RouteFilter.microbusOnly;
+      case '6': return RouteFilter.metroOnly;
+      default: return RouteFilter.optimal;
     }
   }
 
-  void _showDetails(RouteHistoryItem item) {
-    showModalBottomSheet(
+  Future<void> _navigateToRoute(RouteHistoryItem item) async {
+    final text = item.inputText;
+    if (text == null || text.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot load route: no search query available')),
+        );
+      }
+      return;
+    }
+
+    showDialog(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        final theme = Theme.of(context);
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: theme.dividerColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Icon(Icons.history, color: theme.colorScheme.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Route Details',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              _detailRow(theme, 'From', item.originName ?? 'N/A', Icons.trip_origin),
-              const SizedBox(height: 12),
-              _detailRow(theme, 'To', item.destinationName ?? 'N/A', Icons.location_on),
-              if (item.inputText != null) ...[
-                const SizedBox(height: 12),
-                _detailRow(theme, 'Request', item.inputText!, Icons.search),
-              ],
-              const Divider(height: 32),
-              Row(
-                children: [
-                  _miniBadge(theme, Icons.schedule, _formatDuration(item.totalDurationSeconds)),
-                  const SizedBox(width: 12),
-                  _miniBadge(theme, Icons.straighten, _formatDistance(item.totalDistanceMeters)),
-                  const SizedBox(width: 12),
-                  _miniBadge(theme, Icons.attach_money, _formatFare(item.estimatedFare)),
-                ],
-              ),
-              const Divider(height: 32),
-              _detailRow(theme, 'Filter', _formatFilter(item.filter), Icons.tune),
-              const SizedBox(height: 12),
-              _detailRow(theme, 'Status', item.status, Icons.info_outline),
-              if (item.errorCode != null) ...[
-                const SizedBox(height: 12),
-                _detailRow(theme, 'Error', item.errorCode!, Icons.error_outline),
-              ],
-              const SizedBox(height: 12),
-      _detailRow(
-        theme,
-        'Date',
-        _formatDate(item.createdAt),
-        Icons.calendar_today,
-      ),
-            ],
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final filter = _parseFilter(item.filter);
+      final routeResponse = await _routeService.getRouteByText(
+        text: text,
+        filter: filter,
+      );
+
+      if (mounted) {
+        Navigator.pop(context); // dismiss loading
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RouteResultsPage(routeResponse: routeResponse),
           ),
         );
-      },
-    );
-  }
-
-  Widget _detailRow(ThemeData theme, String label, String value, IconData icon) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 18, color: theme.colorScheme.primary),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: theme.colorScheme.onSurface.withOpacity(0.5),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 14,
-                color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _miniBadge(ThemeData theme, IconData icon, String value) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: theme.colorScheme.primary),
-          const SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-        ],
-      ),
-    );
+      }
+    } catch (e) {
+      debugPrint('Error fetching route from history: $e');
+      if (mounted) {
+        Navigator.pop(context); // dismiss loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to load route. Please try again.')),
+        );
+      }
+    }
   }
 
   @override
@@ -293,7 +172,7 @@ class _HistoryPageState extends State<HistoryPage> {
                         .map(
                           (item) => _HistoryCard(
                             item: item,
-                            onTap: () => _showDetails(item),
+                            onTap: () => _navigateToRoute(item),
                           ),
                         )
                         .toList(),
@@ -456,7 +335,7 @@ class _HistoryCard extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                   ),
                   child: Text(
-                    'View Details',
+                    'View Route',
                     style: TextStyle(color: theme.colorScheme.onPrimary, fontSize: 12),
                   ),
                 ),

@@ -103,7 +103,7 @@ class ChatStorageService {
       
       // Check if route already exists
       final existingIndex = favoritesList.indexWhere(
-        (fav) => fav['request_id'] == routeResponse.requestId,
+        (fav) => fav['id'] == routeResponse.requestId,
       );
       
       final favoriteData = {
@@ -149,7 +149,7 @@ class ChatStorageService {
       final favoritesJson = prefs.getString(_favoriteRoutesKey) ?? '[]';
       final favoritesList = jsonDecode(favoritesJson) as List<dynamic>;
       
-      favoritesList.removeWhere((fav) => fav['request_id'] == requestId);
+      favoritesList.removeWhere((fav) => fav['id'] == requestId);
       
       await prefs.setString(_favoriteRoutesKey, jsonEncode(favoritesList));
       print('✅ Favorite route removed: $requestId');

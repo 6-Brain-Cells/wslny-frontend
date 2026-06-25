@@ -26,7 +26,7 @@ class _InitScreenState extends State<InitScreen> {
     if (!mounted) return;
     final route = authProvider.isAuthenticated
         ? AppRoutes.mainLayout
-        : AppRoutes.languageSelection;
+        : AppRoutes.signIn;
     Navigator.of(context).pushReplacementNamed(route);
   }
 

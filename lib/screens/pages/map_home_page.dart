@@ -5,13 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 import '../../models/route_models.dart';
-import '../../models/transit_stop.dart';
 import '../../services/route_service.dart';
 import '../../services/osrm_service.dart';
 import '../../services/location_service.dart';
 import '../../services/geocoding_service.dart';
 import 'package:wslny/config/routes.dart' as routes;
-import 'package:wslny/services/overpass_service.dart';
 
 enum PointPickMode { start, end }
 
@@ -37,7 +35,6 @@ class _MapHomePageState extends State<MapHomePage> {
 
   final LocationService _locationService = LocationService();
   final OsrmService _osrmService = OsrmService();
-  final OverpassService _overpassService = OverpassService();
   final GeocodingService _geocodingService = GeocodingService();
   final RouteService _routeService = RouteService();
 
@@ -50,10 +47,6 @@ class _MapHomePageState extends State<MapHomePage> {
   String? _routeError;
   List<LatLng> _routePoints = [];
   double? _routeDistanceKm;
-  bool _showTransit = false;
-  bool _isLoadingTransit = false;
-  String? _transitError;
-  List<TransitStop> _transitStops = [];
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _searchingLocation = false;
@@ -147,51 +140,11 @@ class _MapHomePageState extends State<MapHomePage> {
       );
     }
 
-    // Transit markers (metro and bus stations)
-    if (_showTransit && _transitError == null) {
-      final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-      final transitMarkers = _buildTransitMarkers(_transitStops, center);
-      m.addAll(transitMarkers);
-    }
-
     setState(
       () => _markers
         ..clear()
         ..addAll(m),
     );
-  }
-
-  Set<Marker> _buildTransitMarkers(List<TransitStop> stations, LatLng center) {
-    final markers = <Marker>{};
-
-    TransitStop? closestMetro;
-    double closestMetroDist = double.infinity;
-
-    for (final station in stations) {
-      if (station.type != TransitStopType.metro) continue;
-      final distance = _calculateDistance(center, station.position);
-      if (distance > 3000) continue;
-      if (distance < closestMetroDist) {
-        closestMetro = station;
-        closestMetroDist = distance;
-      }
-    }
-
-    if (closestMetro != null) {
-      markers.add(
-        Marker(
-          markerId: const MarkerId('transit_metro'),
-          position: closestMetro.position,
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueViolet),
-          infoWindow: InfoWindow(
-            title: _getTransitStationTitle(closestMetro),
-            snippet: '${(closestMetroDist / 1000).toStringAsFixed(1)} km away',
-          ),
-        ),
-      );
-    }
-
-    return markers;
   }
 
   void _updatePolyline() {
@@ -619,90 +572,6 @@ class _MapHomePageState extends State<MapHomePage> {
     }
   }
 
-  Future<void> _toggleTransit() async {
-    if (_showTransit) {
-      setState(() {
-        _showTransit = false;
-        _transitError = null;
-        _transitStops = [];
-      });
-      _updateMarkers();
-      return;
-    }
-
-    final center = _myLocation ?? _start ?? _end ?? _defaultCenter;
-
-    setState(() {
-      _showTransit = true;
-      _isLoadingTransit = true;
-      _transitError = null;
-      _transitStops = [];
-    });
-
-    try {
-      var result = await _overpassService.getClosestMetroStation(center);
-
-      if (!result.isSuccess) {
-        result = await _overpassService.getTransitStops(center);
-      }
-
-      if (!mounted) return;
-
-      setState(() {
-        _isLoadingTransit = false;
-        if (result.isSuccess) {
-          _transitError = null;
-          _transitStops = result.stops;
-        } else {
-          _transitError = result.error;
-          _transitStops = [];
-        }
-      });
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoadingTransit = false;
-          _transitError = 'Failed to find metro station: $e';
-          _transitStops = [];
-        });
-      }
-    }
-
-    if (mounted) _updateMarkers();
-  }
-
-  String _getTransitStationTitle(TransitStop station) {
-    switch (station.type) {
-      case TransitStopType.metro:
-        return '🚇 ${station.name}';
-      case TransitStopType.bus:
-        return '🚌 ${station.name}';
-      case TransitStopType.platform:
-        return '🚉 ${station.name}';
-    }
-  }
-
-  double _calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371000; // Earth's radius in meters
-
-    final double lat1Rad = point1.latitude * math.pi / 180;
-    final double lat2Rad = point2.latitude * math.pi / 180;
-    final double deltaLatRad =
-        (point2.latitude - point1.latitude) * math.pi / 180;
-    final double deltaLngRad =
-        (point2.longitude - point1.longitude) * math.pi / 180;
-
-    final double a =
-        math.sin(deltaLatRad / 2) * math.sin(deltaLatRad / 2) +
-        math.cos(lat1Rad) *
-            math.cos(lat2Rad) *
-            math.sin(deltaLngRad / 2) *
-            math.sin(deltaLngRad / 2);
-    final double c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
-
-    return earthRadius * c; // Distance in meters
-  }
-
   Future<void> _searchLocation() async {
     final query = _searchController.text.trim();
     if (query.isEmpty) {
@@ -954,12 +823,8 @@ class _MapHomePageState extends State<MapHomePage> {
                                 isRouting: _isRouting,
                                 routeError: _routeError,
                                 routeDistanceKm: _routeDistanceKm,
-                                showTransit: _showTransit,
-                                isLoadingTransit: _isLoadingTransit,
-                                transitError: _transitError,
                                 onMeToStart: _meToStart,
                                 onMeToEnd: _meToEnd,
-                                onShowTransit: _toggleTransit,
                                 onClear: _clearPoints,
                                 onRequestRoute: _requestRoute,
                               ),
@@ -1421,12 +1286,8 @@ class _ControlPanel extends StatelessWidget {
   final bool isRouting;
   final String? routeError;
   final double? routeDistanceKm;
-  final bool showTransit;
-  final bool isLoadingTransit;
-  final String? transitError;
   final VoidCallback onMeToStart;
   final VoidCallback onMeToEnd;
-  final VoidCallback onShowTransit;
   final VoidCallback onClear;
   final VoidCallback onRequestRoute;
 
@@ -1442,12 +1303,8 @@ class _ControlPanel extends StatelessWidget {
     required this.isRouting,
     required this.routeError,
     required this.routeDistanceKm,
-    required this.showTransit,
-    required this.isLoadingTransit,
-    required this.transitError,
     required this.onMeToStart,
     required this.onMeToEnd,
-    required this.onShowTransit,
     required this.onClear,
     required this.onRequestRoute,
   });
@@ -1554,13 +1411,6 @@ class _ControlPanel extends StatelessWidget {
                   icon: const Icon(Icons.my_location, size: 18),
                   label: const Text('Me → End'),
                 ),
-                FilledButton.tonalIcon(
-                  onPressed: isLoadingTransit ? null : onShowTransit,
-                  icon: showTransit
-                      ? const Icon(Icons.directions_transit, size: 18)
-                      : const Icon(Icons.directions_transit_outlined, size: 18),
-                  label: Text(showTransit ? 'Hide transit' : 'Show transit'),
-                ),
                 OutlinedButton(
                   onPressed: (start != null || end != null) ? onClear : null,
                   child: const Text('Clear'),
@@ -1620,14 +1470,6 @@ class _ControlPanel extends StatelessWidget {
               Text(
                 'Distance: ${routeDistanceKm!.toStringAsFixed(2)} km',
                 style: Theme.of(context).textTheme.titleSmall,
-              ),
-            if (transitError != null)
-              Text(
-                transitError!,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.error,
-                  fontSize: 12,
-                ),
               ),
             if (myLocation != null)
               Text(
