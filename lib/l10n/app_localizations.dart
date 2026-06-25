@@ -320,6 +320,12 @@ abstract class AppLocalizations {
   /// **'Favorites'**
   String get navFavorites;
 
+  /// No description provided for @navHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'History'**
+  String get navHistory;
+
   /// No description provided for @navCommunity.
   ///
   /// In en, this message translates to:

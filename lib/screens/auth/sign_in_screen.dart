@@ -24,10 +24,6 @@ class _SignInScreenState extends State<SignInScreen> {
   final _passwordController = TextEditingController();
   bool _rememberMe = false;
 
-  void _navigateToLanguageSelection() {
-    Navigator.pushReplacementNamed(context, AppRoutes.languageSelection);
-  }
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -164,23 +160,12 @@ class _SignInScreenState extends State<SignInScreen> {
     final languageProvider = Provider.of<LanguageProvider>(context);
     final isRTL = languageProvider.isArabic;
 
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (bool didPop) {
-        if (!didPop) {
-          _navigateToLanguageSelection();
-        }
-      },
-      child: Directionality(
-        textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: Icon(isRTL ? Icons.arrow_forward : Icons.arrow_back),
-              onPressed: _navigateToLanguageSelection,
-            ),
-            actions: [
-              Padding(
+    return Directionality(
+      textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            Padding(
                 padding: const EdgeInsets.only(right: 16, left: 16),
                 child: Row(
                   children: [
@@ -369,7 +354,6 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 }

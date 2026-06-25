@@ -120,6 +120,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get navFavorites => 'المفضلة';
 
   @override
+  String get navHistory => 'السجل';
+
+  @override
   String get navCommunity => 'المجتمع';
 
   @override

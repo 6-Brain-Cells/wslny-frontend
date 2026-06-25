@@ -50,6 +50,11 @@ class BottomNavBar extends StatelessWidget {
             label: l10n.navFavorites,
           ),
           NavigationDestination(
+            icon: Icon(Icons.history, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+            selectedIcon: Icon(Icons.history, color: theme.colorScheme.primary),
+            label: l10n.navHistory,
+          ),
+          NavigationDestination(
             icon: Icon(Icons.person_outline, color: theme.colorScheme.onSurface.withOpacity(0.6)),
             selectedIcon: Icon(Icons.person, color: theme.colorScheme.primary),
             label: l10n.navProfile,

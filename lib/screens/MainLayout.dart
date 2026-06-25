@@ -5,6 +5,7 @@ import 'package:wslny/providers/language_provider.dart';
 import 'package:wslny/widgets/common/bottom_nav_bar.dart';
 import 'package:wslny/screens/pages/map_home_page.dart';
 import 'package:wslny/screens/pages/favorites_page.dart';
+import 'package:wslny/screens/pages/history_page.dart';
 import 'package:wslny/screens/pages/profile_page.dart';
 
 class MainLayout extends StatefulWidget {
@@ -20,6 +21,7 @@ class _MainLayoutState extends State<MainLayout> {
   final _pages = const [
     MapHomePage(),
     FavoritesPage(),
+    HistoryPage(),
     ProfilePage(),
   ];
 

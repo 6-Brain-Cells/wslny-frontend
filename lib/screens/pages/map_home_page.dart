@@ -832,6 +832,7 @@ class _MapHomePageState extends State<MapHomePage> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             Container(
