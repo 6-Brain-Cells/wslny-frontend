@@ -5,7 +5,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../config/routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/language_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
 import '../../widgets/common/loading_overlay.dart';
@@ -158,356 +157,351 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final authProvider = Provider.of<AuthProvider>(context);
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isArabic;
 
-    return Directionality(
-      textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
-        appBar: AppBar(
-          actions: [
-            Padding(
-                padding: const EdgeInsets.only(right: 16, left: 16),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Center(
-                        child: Icon(Icons.waves, size: 20, color: Colors.white),
-                      ),
+    return Scaffold(
+      appBar: AppBar(
+        actions: [
+          Padding(
+              padding: const EdgeInsets.only(right: 16, left: 16),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Wslny',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.onSurface,
-                      ),
+                    child: const Center(
+                      child: Icon(Icons.waves, size: 20, color: Colors.white),
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Wslny',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
-          body: LoadingOverlay(
-            isLoading: authProvider.isLoading,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title
-                    Text(
-                      l10n.createAccount,
-                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+            ),
+          ],
+        ),
+        body: LoadingOverlay(
+          isLoading: authProvider.isLoading,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title
+                  Text(
+                    l10n.createAccount,
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Subtitle
+                  Text(
+                    l10n.joinWslnyToStart,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  // First Name Field
+                  CustomTextField(
+                    controller: _firstNameController,
+                    label: 'First Name',
+                    hintText: 'Enter your first name',
+                    keyboardType: TextInputType.name,
+                    prefixIcon: const Icon(Icons.person_outline),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your first name';
+                      }
+                      if (value.length < 2) {
+                        return 'Name must be at least 2 characters';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Last Name Field
+                  CustomTextField(
+                    controller: _lastNameController,
+                    label: 'Last Name',
+                    hintText: 'Enter your last name',
+                    keyboardType: TextInputType.name,
+                    prefixIcon: const Icon(Icons.person_outline),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your last name';
+                      }
+                      if (value.length < 2) {
+                        return 'Name must be at least 2 characters';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Email Field
+                  CustomTextField(
+                    controller: _emailController,
+                    label: l10n.email,
+                    hintText: l10n.enterYourEmail,
+                    keyboardType: TextInputType.emailAddress,
+                    prefixIcon: const Icon(Icons.email_outlined),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter your email';
+                      }
+                      if (!RegExp(
+                        r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
+                      ).hasMatch(value)) {
+                        return 'Please enter a valid email';
+                      }
+                      return null;
+                    },
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Phone Number Field
+                  CustomTextField(
+                    controller: _phoneController,
+                    label: l10n.phoneNumberOptional,
+                    hintText: l10n.phoneNumberPlaceholder,
+                    keyboardType: TextInputType.phone,
+                    prefixIcon: const Icon(Icons.phone_outlined),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // Gender Field
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Gender',
+                        style: Theme.of(context).textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w500),
                       ),
-                    ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Male'),
+                              value: 'male',
+                              groupValue: _selectedGender,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedGender = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Female'),
+                              value: 'female',
+                              groupValue: _selectedGender,
+                              onChanged: (value) {
+                                setState(() {
+                                  _selectedGender = value!;
+                                });
+                              },
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 8),
+                  const SizedBox(height: 20),
 
-                    // Subtitle
-                    Text(
-                      l10n.joinWslnyToStart,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
+                  // Address Field
+                  CustomTextField(
+                    controller: _addressController,
+                    label: 'Address (Optional)',
+                    hintText: 'Enter your address',
+                    keyboardType: TextInputType.streetAddress,
+                    prefixIcon: const Icon(Icons.location_on_outlined),
+                  ),
 
-                    const SizedBox(height: 32),
+                  const SizedBox(height: 20),
 
-                    // First Name Field
-                    CustomTextField(
-                      controller: _firstNameController,
-                      label: 'First Name',
-                      hintText: 'Enter your first name',
-                      keyboardType: TextInputType.name,
-                      prefixIcon: const Icon(Icons.person_outline),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your first name';
-                        }
-                        if (value.length < 2) {
-                          return 'Name must be at least 2 characters';
-                        }
-                        return null;
-                      },
-                    ),
+                  // Password Field
+                  CustomTextField(
+                    controller: _passwordController,
+                    label: l10n.password,
+                    hintText: l10n.createPassword,
+                    obscureText: true,
+                    showPasswordToggle: true,
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please enter a password';
+                      }
+                      if (value.length < 8) {
+                        return 'Password must be at least 8 characters';
+                      }
+                      return null;
+                    },
+                  ),
 
-                    const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
-                    // Last Name Field
-                    CustomTextField(
-                      controller: _lastNameController,
-                      label: 'Last Name',
-                      hintText: 'Enter your last name',
-                      keyboardType: TextInputType.name,
-                      prefixIcon: const Icon(Icons.person_outline),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your last name';
-                        }
-                        if (value.length < 2) {
-                          return 'Name must be at least 2 characters';
-                        }
-                        return null;
-                      },
-                    ),
+                  // Confirm Password Field
+                  CustomTextField(
+                    controller: _confirmPasswordController,
+                    label: l10n.confirmPassword,
+                    hintText: l10n.confirmYourPassword,
+                    obscureText: true,
+                    showPasswordToggle: true,
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please confirm your password';
+                      }
+                      if (value != _passwordController.text) {
+                        return 'Passwords do not match';
+                      }
+                      return null;
+                    },
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
-                    // Email Field
-                    CustomTextField(
-                      controller: _emailController,
-                      label: l10n.email,
-                      hintText: l10n.enterYourEmail,
-                      keyboardType: TextInputType.emailAddress,
-                      prefixIcon: const Icon(Icons.email_outlined),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!RegExp(
-                          r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$',
-                        ).hasMatch(value)) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Phone Number Field
-                    CustomTextField(
-                      controller: _phoneController,
-                      label: l10n.phoneNumberOptional,
-                      hintText: l10n.phoneNumberPlaceholder,
-                      keyboardType: TextInputType.phone,
-                      prefixIcon: const Icon(Icons.phone_outlined),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Gender Field
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Gender',
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w500),
+                  // Terms and Conditions Checkbox
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: Checkbox(
+                          value: _agreeToTerms,
+                          onChanged: (value) {
+                            setState(() {
+                              _agreeToTerms = value ?? false;
+                            });
+                          },
                         ),
-                        const SizedBox(height: 8),
-                        Row(
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Wrap(
                           children: [
-                            Expanded(
-                              child: RadioListTile<String>(
-                                title: const Text('Male'),
-                                value: 'male',
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value!;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
+                            Text(
+                              '${l10n.agreeToTerms} ',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            InkWell(
+                              onTap: () {
+                                // Navigate to terms of service
+                              },
+                              child: Text(
+                                l10n.termsOfService,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
-                            Expanded(
-                              child: RadioListTile<String>(
-                                title: const Text('Female'),
-                                value: 'female',
-                                groupValue: _selectedGender,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedGender = value!;
-                                  });
-                                },
-                                contentPadding: EdgeInsets.zero,
+                            Text(
+                              ' ${l10n.and} ',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            InkWell(
+                              onTap: () {
+                                // Navigate to privacy policy
+                              },
+                              child: Text(
+                                l10n.privacyPolicy,
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
                           ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                    // Address Field
-                    CustomTextField(
-                      controller: _addressController,
-                      label: 'Address (Optional)',
-                      hintText: 'Enter your address',
-                      keyboardType: TextInputType.streetAddress,
-                      prefixIcon: const Icon(Icons.location_on_outlined),
-                    ),
+                  // Create Account Button
+                  CustomButton(
+                    text: l10n.createAccountButton,
+                    onPressed: _handleSignUp,
+                  ),
 
-                    const SizedBox(height: 20),
+                  const SizedBox(height: 24),
 
-                    // Password Field
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: l10n.password,
-                      hintText: l10n.createPassword,
-                      obscureText: true,
-                      showPasswordToggle: true,
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        if (value.length < 8) {
-                          return 'Password must be at least 8 characters';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // Confirm Password Field
-                    CustomTextField(
-                      controller: _confirmPasswordController,
-                      label: l10n.confirmPassword,
-                      hintText: l10n.confirmYourPassword,
-                      obscureText: true,
-                      showPasswordToggle: true,
-                      prefixIcon: const Icon(Icons.lock_outline),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // Terms and Conditions Checkbox
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: Checkbox(
-                            value: _agreeToTerms,
-                            onChanged: (value) {
-                              setState(() {
-                                _agreeToTerms = value ?? false;
-                              });
-                            },
-                          ),
+                  // Divider with "or sign up with"
+                  Row(
+                    children: [
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          l10n.orSignUpWith,
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Wrap(
-                            children: [
-                              Text(
-                                '${l10n.agreeToTerms} ',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  // Navigate to terms of service
-                                },
-                                child: Text(
-                                  l10n.termsOfService,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              ),
-                              Text(
-                                ' ${l10n.and} ',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                              InkWell(
-                                onTap: () {
-                                  // Navigate to privacy policy
-                                },
-                                child: Text(
-                                  l10n.privacyPolicy,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        color: Theme.of(context).colorScheme.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const Expanded(child: Divider()),
+                    ],
+                  ),
 
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                    // Create Account Button
-                    CustomButton(
-                      text: l10n.createAccountButton,
-                      onPressed: _handleSignUp,
-                    ),
+                  // Google Sign Up Button
+                  SocialAuthButton(
+                    text: l10n.continueWithGoogle,
+                    icon: Icons.g_mobiledata,
+                    iconColor: const Color(0xFFDB4437),
+                    onPressed: _handleGoogleSignUp,
+                  ),
 
-                    const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                    // Divider with "or sign up with"
-                    Row(
-                      children: [
-                        const Expanded(child: Divider()),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            l10n.orSignUpWith,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ),
-                        const Expanded(child: Divider()),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Google Sign Up Button
-                    SocialAuthButton(
-                      text: l10n.continueWithGoogle,
-                      icon: Icons.g_mobiledata,
-                      iconColor: const Color(0xFFDB4437),
-                      onPressed: _handleGoogleSignUp,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Sign In Link
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          l10n.alreadyHaveAccount,
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          child: Text(l10n.signIn),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  // Sign In Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        l10n.alreadyHaveAccount,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        child: Text(l10n.signIn),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),

@@ -5,7 +5,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../config/routes.dart';
 import '../../l10n/app_localizations.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/language_provider.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
 import '../../widgets/common/loading_overlay.dart';
@@ -157,12 +156,8 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final authProvider = Provider.of<AuthProvider>(context);
-    final languageProvider = Provider.of<LanguageProvider>(context);
-    final isRTL = languageProvider.isArabic;
 
-    return Directionality(
-      textDirection: isRTL ? TextDirection.rtl : TextDirection.ltr,
-      child: Scaffold(
+    return Scaffold(
         appBar: AppBar(
           actions: [
             Padding(
@@ -353,7 +348,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-        ),
     );
   }
 }
+

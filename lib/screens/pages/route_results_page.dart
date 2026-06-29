@@ -8,6 +8,7 @@ import '../../models/transit_stop.dart';
 import '../../services/osrm_service.dart';
 import '../../services/chat_storage_service.dart';
 import '../../services/overpass_service.dart';
+import '../../widgets/common/route_feedback_dialog.dart';
 
 class RouteResultsPage extends StatefulWidget {
   final RouteResponse routeResponse;
@@ -329,6 +330,14 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
     _mapController?.animateCamera(CameraUpdate.newLatLngBounds(bounds, 100));
   }
 
+  Future<void> _showFeedbackDialog() async {
+    await showDialog<bool>(
+      context: context,
+      builder: (context) =>
+          RouteFeedbackDialog(requestId: widget.routeResponse.requestId),
+    );
+  }
+
   Future<void> _checkIfSaved() async {
     try {
       final isFavorite = await ChatStorageService.isRouteFavorite(
@@ -433,6 +442,11 @@ class _RouteResultsPageState extends State<RouteResultsPage> {
             icon: Icon(_isSaved ? Icons.favorite : Icons.favorite_border),
             onPressed: _toggleSaveRoute,
             tooltip: _isSaved ? 'Remove from favorites' : 'Save to favorites',
+          ),
+          IconButton(
+            icon: const Icon(Icons.rate_review_outlined),
+            onPressed: _showFeedbackDialog,
+            tooltip: 'Rate this route',
           ),
           IconButton(
             icon: const Icon(Icons.zoom_out_map),

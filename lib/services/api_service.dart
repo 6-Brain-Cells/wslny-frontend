@@ -16,6 +16,7 @@ class ApiService {
         baseUrl: baseUrl,
         connectTimeout: Duration(milliseconds: AppConstants.apiTimeout),
         receiveTimeout: Duration(milliseconds: AppConstants.apiTimeout),
+        validateStatus: (status) => true,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
